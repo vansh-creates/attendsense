@@ -1,2 +1,2 @@
 # attendsense
-This is my first cursor project.
+This is my first project
