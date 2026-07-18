@@ -335,19 +335,19 @@ Organize component hierarchies cleanly:
 ## 11.1 Mathematical Formulas
 *   **Subject Attendance Calculation**:
     $$\text{Percentage} = \left( \frac{\text{Present Classes}}{\text{Total Classes}} \right) \times 100$$
-    *Note: If total classes are 0, return $100\%$ to prevent division-by-zero errors.*
+    *Note: If total classes are 0, return $100\%$ to prevent division-by-zero errors. This is an implementation decision chosen solely to prevent division-by-zero errors and provide deterministic calculations; user interfaces may alternatively display "N/A" while preserving the underlying calculation.*
 *   **Overall Cumulative Percentage**:
     $$\text{Overall Percentage} = \left( \frac{\sum \text{Present Classes}}{\sum \text{Total Classes}} \right) \times 100$$
-    *Note: If cumulative classes are 0, return $100\%$.*
+    *Note: If cumulative classes are 0, return $100\%$. This is an implementation decision chosen solely to prevent division-by-zero errors and provide deterministic calculations; user interfaces may alternatively display "N/A" while preserving the underlying calculation.*
 
 ## 11.2 Safety Margin Buffer
 *   Define the safe limits:
     $$\text{Safety Margin} = \text{Overall Percentage} - \text{Threshold}$$
-    *The threshold is set to a default value (e.g. 75%).*
+    *The threshold is institution-configurable, with 75% serving only as a default/example value to ensure the implementation remains future-proof for institutions with different requirements.*
 
 ## 11.3 Status Indicators
 Categorize metrics based on target zones:
-*   `Safe`: Meets or exceeds target safety threshold levels (e.g., $\ge 75\%$).
+*   `Safe`: Meets or exceeds the institution-configurable safety threshold (e.g., $\ge 75\%$ by default).
 *   `Warning`: Below safety threshold levels but above critical thresholds.
 *   `Critical`: Drops below critical thresholds, requiring academic intervention.
 
@@ -400,7 +400,11 @@ Categorize metrics based on target zones:
 
 ## 13.5 Cost Optimization
 *   Verify the existence of cached advice records in the `AI Recommendation` database schema.
-*   If a cached recommendation exists for the student and is within its valid period, serve the cached advice immediately.
+*   Serve the cached recommendation if it is within its valid period. Cached AI recommendations are invalidated and regenerated when:
+    *   Attendance data changes,
+    *   Student profile information used by the prompt changes,
+    *   The AI prompt version changes, or
+    *   The cache TTL expires (example: 24 hours).
 
 ---
 
@@ -410,8 +414,8 @@ Categorize metrics based on target zones:
 *   **Interface**: Composed of responsive forms, layouts, and document lists under the profile route.
 *   **Stateful Forms**: Manage local component state for updating text URL variables (GitHub, LinkedIn, Coding Profiles).
 *   **Certification Records**: Form layouts mapping inputs to the `Certification` database entity. Displays uploaded credentials alongside external verification URLs.
-*   **Resume Controller**: Handles single-active-resume uploads. Pushing a new document calls the deletion route for the old object, keeping the file system clean.
-*   **Achievements Log**: A list system that displays academic and technical records, binding entries to the student ID.
+*   **Resume Controller**: Handles single-active-resume uploads. Replacing a resume follows a structured workflow to prevent accidental data loss if an upload fails: (1) Upload the new resume file, (2) Verify upload success, (3) Update the database reference, and (4) Delete the previous resume.
+*   **Achievements Log**: A list system that displays academic and technical records, binding entries to the student ID. The `Achievement` entity is used to capture various accomplishments, including workshops, hackathons, competitions, conferences, extracurricular activities, and similar accomplishments.
 
 ---
 
