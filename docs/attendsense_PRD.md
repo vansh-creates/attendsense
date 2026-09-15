@@ -336,19 +336,17 @@ The Safe Bunk Calculator shall be available when the applicable course record in
 
 The calculator shall use the student's latest confirmed course-aware attendance dataset as its starting point.
 
-For Safe Bunk planning, AttendSense shall generate the applicable scheduled lectures and laboratory sessions beginning from the **current day through the final applicable academic day of the current week**.
+For Safe Bunk planning, AttendSense shall generate only the applicable remaining scheduled lectures and laboratory sessions for the **current day**.
 
-The available future classes shall be determined using the student's confirmed timetable, confirmed Academic Calendar, course-code mapping, batch applicability, and current date/time.
+The available classes shall be determined using the student's confirmed timetable, confirmed Academic Calendar, course-code mapping, batch applicability, and current date/time. Only classes whose scheduled start time has not yet been reached shall be selectable bunk opportunities; once a class has started, it shall no longer be selectable for Safe Bunk planning.
 
 Timetable occurrences falling on holidays or other non-working academic days shall not be presented as applicable bunk options.
 
-Every displayed future class shall initially be treated as **ATTEND**.
-
-The student shall be able to change one or multiple applicable classes from **ATTEND** to **BUNK**.
+The student shall be able to select one or multiple applicable classes they are considering missing.
 
 There shall be no predefined limit on how many of the displayed future classes the student may select for bunk analysis.
 
-The calculation shall operate on the matched course records for the selected applicable classes.
+The calculation shall operate only on the matched course records for the explicitly selected applicable classes. Unselected displayed classes shall not be treated as projected attended sessions or otherwise affect the projection.
 
 For each selected bunk of a matched applicable class:
 
@@ -356,7 +354,7 @@ For each selected bunk of a matched applicable class:
 - Projected present attendance shall remain unchanged.
 - Projected absent attendance shall increase by one.
 
-Classes remaining in the **ATTEND** state shall be treated as attended within the selected Safe Bunk plan and shall affect their corresponding matched course records as attended sessions.
+If multiple selected classes belong to the same matched course, each selected skipped occurrence shall affect that course record. If selected classes belong to different courses, each affected course record shall be calculated independently.
 
 AttendSense shall calculate the resulting projected attendance for each affected course after applying the complete selected plan. Overall attendance may be displayed as supporting context where useful.
 
@@ -364,7 +362,7 @@ The selected bunk plan shall be considered **safe** only when the resulting atte
 
 If the selected plan would reduce an affected matched course below 75%, AttendSense shall clearly indicate that the selected plan is unsafe.
 
-The result shall clearly communicate that its calculation assumes the student attends the other displayed classes that remain marked as **ATTEND**.
+The result shall clearly communicate that it reflects only the classes explicitly selected for bunk analysis and does not assume attendance for unselected displayed classes.
 
 Safe Bunk calculations shall not modify the student's latest confirmed attendance dataset.
 
@@ -542,19 +540,23 @@ Features outside the requirements defined for Phase 1 shall not be considered pa
 
 ## 4.1 Overview
 
-AttendSense shall provide a structured student workflow covering authentication, academic configuration, attendance-data processing, and attendance analysis.
+AttendSense shall provide a structured student workflow covering authentication, academic configuration, timetable and Academic Calendar setup, attendance-data processing, and attendance analysis.
 
-Attendance analysis shall operate using the student's **latest confirmed overall attendance dataset**.
+Attendance analysis shall operate using the student's latest confirmed course-aware attendance dataset together with a confirmed timetable and confirmed Academic Calendar.
 
 The general application flow shall be:
 
-**Open AttendSense → Authentication → Academic Configuration → Dashboard → Attendance Data Availability → Select Analysis Feature → Feature-Specific Attendance Planning → Calculation/Simulation → Result**
+**Open AttendSense → Authentication → Academic Context → Required Timetable/Academic Calendar Setup → Dashboard / Today's Decision Center → Attendance Data Availability → Select Analysis Feature → Feature-Specific Attendance Planning → Calculation/Simulation → Result**
 
 A student shall not be required to upload attendance data every time they use AttendSense.
 
 Once an attendance dataset has been successfully processed, reviewed, confirmed, and saved, it shall remain the student's latest confirmed attendance dataset until a newer dataset successfully replaces it.
 
 Calculator and simulation results shall not modify that confirmed dataset.
+
+For calendar-dependent flows, confirmed Teaching and Teaching Continues states shall permit timetable sessions, while confirmed public holidays and non-teaching periods may suppress them. Unknown or ambiguous calendar events shall require review or conservative handling and shall not silently suppress classes.
+
+Where structured course codes exist, course code shall be the primary identity for matching attendance records and timetable sessions. Theory and Practical records with separate official codes shall remain separate, and minor OCR differences in course names shall not override a valid course-code match.
 
 ---
 
@@ -605,15 +607,21 @@ For a first-time student:
 
 1. AttendSense presents the academic setup interface.
 2. The student selects the required academic information from supported predefined options.
-3. AttendSense validates the selected configuration.
-4. The appropriate predefined class timetable is associated with the student's account.
-5. The applicable academic calendar is associated with the student's account.
-6. The completed academic configuration is saved.
-7. The student proceeds to the main application interface.
+3. AttendSense validates and saves the academic context required for attendance planning.
+4. AttendSense determines whether a confirmed timetable and confirmed Academic Calendar are available.
+5. The student completes the required setup flow for any missing input before calculations that depend on it are allowed.
 
-Students shall not be required to manually create their complete class timetable or academic calendar.
+Saving academic configuration shall not automatically assign or provide timetable or Academic Calendar data.
 
 Returning students shall not be required to repeat first-time academic configuration unless the stored configuration needs to be updated.
+
+### Timetable Setup
+
+If no confirmed timetable exists, the student shall select timetable setup and upload a timetable **image or screenshot only**. AttendSense shall perform file/input validation, extract structured timetable data, perform automatic validation, and show the result for student review and manual editing. After the student confirms and the timetable is saved, it shall remain active until the student explicitly replaces or updates it.
+
+### Academic Calendar Setup
+
+If no confirmed Academic Calendar exists, the student shall select Academic Calendar setup and upload the official SPCE Academic Calendar **PDF only**. AttendSense shall perform file/input validation, extract structured calendar data, perform automatic validation, and show the result for student review and manual editing. After the student confirms and the Academic Calendar is saved, it shall remain active until the student explicitly replaces or updates it.
 
 ---
 
@@ -624,14 +632,16 @@ After authentication and completion of required academic configuration, the stud
 The dashboard shall provide access to:
 
 - Attendance-data upload/update.
-- Safe Bunk Calculator.
+- Today's Decision Center / Safe Bunk Calculator.
 - Attendance Recovery Calculator.
 - Future Attendance Simulator.
+- Timetable update/replacement.
+- Academic Calendar update/replacement.
 - Relevant account or academic-configuration controls.
 
 If a latest confirmed attendance dataset exists, AttendSense shall make it available to all applicable attendance-analysis features.
 
-If no confirmed attendance dataset exists, the student shall be required to provide attendance information before performing attendance analysis.
+If no confirmed attendance dataset exists, the student shall be required to provide attendance information before performing attendance analysis. If a confirmed timetable or Academic Calendar required by an analysis is unavailable, the student shall be directed to complete the corresponding setup flow.
 
 The interface may display contextual information about the latest confirmed attendance dataset, such as when it was last updated.
 
@@ -711,15 +721,14 @@ After attendance data is received:
 3. Attendance information is extracted.
 4. Extracted information is normalized.
 5. Relevant No Attendance/non-attendance values are handled according to the defined normalization rules.
-6. AttendSense determines the required overall attendance values, including:
-   - Overall Present Slots.
-   - Overall Effective Total Slots.
-7. Automatic attendance-data validation is performed.
-8. If validation succeeds, the interpreted attendance information is prepared for student review.
+6. AttendSense determines the course-aware attendance information required for approved calculations and preserves valid structured course codes where available.
+7. Theory and practical attendance records remain separate when they have separate official course codes.
+8. Automatic attendance-data validation is performed.
+9. If validation succeeds, the interpreted attendance information is prepared for student review and editing.
 
 The required processing pipeline shall be:
 
-**Attendance Input → File Validation → Extraction → Normalization → Automatic Validation → Student Review**
+**Attendance Input → File/Input Validation → Extraction → Structured Data / Normalization → Automatic Validation → Student Review/Edit → Student Confirmation → Save**
 
 If reliable processing cannot be completed, the workflow shall stop and the student shall receive an appropriate error or re-upload request.
 
@@ -733,7 +742,9 @@ After successful processing and automatic validation:
 
 1. AttendSense displays the interpreted attendance information to the student.
 2. The student reviews the information for correctness.
-3. The student either:
+3. The student may manually correct incorrect extracted values.
+4. Any corrected data is validated before confirmation.
+5. The student either:
    - Confirms the extracted attendance dataset, or
    - Rejects the extracted attendance dataset.
 
@@ -750,8 +761,6 @@ After successful processing and automatic validation:
 2. The previous confirmed dataset, if one exists, shall remain unchanged.
 3. The student shall be allowed to provide attendance data again.
 
-Manual editing of extracted attendance numbers shall not be the standard correction mechanism for Phase 1.
-
 ---
 
 ## 4.9 Analysis Feature Selection Flow
@@ -766,13 +775,13 @@ Feature availability shall be determined as follows:
 
 ### Safe Bunk Calculator
 
-Available when confirmed overall attendance is:
+Available when an applicable confirmed course attendance record is:
 
 **>= 75%**
 
 ### Attendance Recovery Calculator
 
-Available when confirmed overall attendance is:
+Available when an applicable confirmed course attendance record is:
 
 **< 75%**
 
@@ -780,7 +789,7 @@ Available when confirmed overall attendance is:
 
 Available at:
 
-**Any confirmed overall attendance percentage**
+**Any confirmed attendance percentage**
 
 Both Safe Bunk and Attendance Recovery may remain visible in the interface regardless of eligibility, but the interface shall clearly communicate when a feature is not currently applicable.
 
@@ -792,35 +801,37 @@ Future Attendance Simulator shall remain available whenever valid confirmed atte
 
 When the student selects **Safe Bunk Calculator**:
 
-1. AttendSense verifies that the student's latest confirmed overall attendance is at or above 75%.
-2. If attendance is below 75%, the Safe Bunk workflow shall not proceed and the student shall be directed toward Attendance Recovery where appropriate.
+1. AttendSense verifies that an applicable confirmed course attendance record is at or above 75%.
+2. If the relevant course attendance is below 75%, the Safe Bunk workflow shall not proceed for that course and the student shall be directed toward Attendance Recovery where appropriate.
 3. AttendSense loads:
-   - Latest confirmed overall Present Slots.
-   - Latest confirmed overall Effective Total Slots.
-   - Applicable class timetable.
-   - Applicable academic calendar.
-   - Current date.
-4. AttendSense determines the valid scheduled lectures and laboratory sessions beginning from the current day through the final applicable academic day of the current week.For the current date, only classes whose scheduled start time has not yet passed shall be treated as applicable future classes.
-5. Timetable occurrences falling on academic holidays or other non-working days are excluded.
-6. AttendSense presents the applicable future classes in a student-friendly schedule interface.
-7. Every displayed class initially has the status **ATTEND**.
-8. The student may change any number of displayed future classes from **ATTEND** to **BUNK**.
-9. AttendSense applies the relevant slot weights:
-   - Lecture = 1 attendance slot.
-   - Laboratory session = 2 attendance slots.
-10. The selected plan is applied to the student's overall attendance values.
-11. AttendSense calculates the projected overall attendance.
-12. The result is compared with the fixed 75% threshold.
+   - Latest confirmed course-aware attendance data.
+   - Confirmed timetable.
+   - Confirmed Academic Calendar.
+   - Course mappings.
+   - Batch applicability.
+   - Current date/time.
+4. AttendSense determines whether today's confirmed Academic Calendar status permits applicable classes.
+5. AttendSense generates only the student's applicable remaining classes for the current day. A class is selectable only while its scheduled start time is in the future; once it has started, it is not a future bunk option.
+6. Batch filtering is applied. If batch applicability cannot be safely determined, AttendSense shall require review rather than guess.
+7. Sessions are matched to attendance records primarily by structured course code where available. Code-less, unmatched, or ambiguous sessions may remain visible for review but shall not affect attendance calculations without a confirmed mapping.
+8. AttendSense presents the applicable remaining classes in a student-friendly schedule interface.
+9. The student selects one or more classes they are considering missing.
+10. Only the explicitly selected classes are projected as skipped. For each selected matched class:
+    - Projected conducted attendance increases by one.
+    - Projected present attendance remains unchanged.
+    - Projected absent attendance increases by one.
+11. Multiple selected classes for the same course shall each affect that course record; selected classes for different courses shall be calculated independently. Unselected displayed classes shall not be assumed to be attended or otherwise affect the projection.
+12. AttendSense calculates projected attendance for each affected course and compares it with the fixed 75% threshold. Overall attendance may be displayed as supporting context where useful.
 
 ### Safe Result
 
-If projected overall attendance is at or above 75%, AttendSense shall indicate that the selected bunk plan is mathematically safe.
+If the projected attendance for each affected course is at or above 75%, AttendSense shall indicate that the selected bunk plan is mathematically safe.
 
 ### Unsafe Result
 
-If projected overall attendance falls below 75%, AttendSense shall indicate that the selected bunk plan is unsafe.
+If the projected attendance for an affected course falls below 75%, AttendSense shall indicate that the selected bunk plan is unsafe.
 
-The result shall make clear that classes remaining marked as **ATTEND** are assumed to be attended within the selected plan.
+The result shall clearly distinguish Safe, At Threshold, or Below Threshold status as applicable and shall state that it reflects only the classes explicitly selected for bunk analysis.
 
 The student shall be able to modify the selections and recalculate the plan.
 
@@ -832,33 +843,31 @@ Safe Bunk analysis shall not modify the student's confirmed attendance dataset.
 
 When the student selects **Attendance Recovery Calculator**:
 
-1. AttendSense verifies that the student's latest confirmed overall attendance is below 75%.
-2. If attendance is already at or above 75%, AttendSense shall indicate that recovery is not currently required.
+1. AttendSense verifies that an applicable confirmed course attendance record is below 75%.
+2. If the relevant course attendance is already at or above 75%, AttendSense shall indicate that recovery is not currently required for that course.
 3. AttendSense loads:
-   - Latest confirmed overall Present Slots.
-   - Latest confirmed overall Effective Total Slots.
+   - Latest confirmed course record, including conducted, present, and absent attendance.
+   - Confirmed timetable and Academic Calendar.
+   - Course mapping and batch applicability.
    - Fixed 75% threshold.
-4. AttendSense calculates the minimum number of additional attendance slots required to mathematically reach at least 75%.
-5. AttendSense loads the applicable timetable and academic calendar.
-6. Valid upcoming lectures and laboratory sessions are generated beginning with the next applicable future class.
-7. Holidays and other non-working days are excluded.
-8. Attendance-slot weights are applied:
-   - Attended Lecture = +1 Present Slot and +1 Effective Total Slot.
-   - Attended Lab = +2 Present Slots and +2 Effective Total Slots.
-9. Future attendance opportunities are accumulated until the calculated recovery requirement is met.
-10. If necessary, recovery planning continues across subsequent academic weeks.
-11. Where sufficient future schedule data is available, AttendSense determines the earliest projected recovery point/date.
+4. AttendSense calculates the minimum future attended sessions required for the applicable course to mathematically reach at least 75%.
+5. For each projected attended matched session, conducted attendance and present attendance increase by one while absent attendance remains unchanged.
+6. Valid upcoming sessions for that course are generated from the confirmed timetable and Academic Calendar, with course matching and batch applicability applied.
+7. Confirmed holidays and non-teaching periods are excluded.
+8. Future attendance opportunities are accumulated until the calculated recovery requirement is met.
+9. If necessary, recovery planning continues across subsequent academic weeks within available schedule/calendar coverage.
+10. Where sufficient future schedule data is available, AttendSense determines the earliest projected recovery point/date.
 
 The result may include:
 
-- Current confirmed overall attendance.
+- Current confirmed course attendance.
 - Required 75% threshold.
-- Number of recovery attendance slots required.
-- Applicable future lectures/labs contributing to the recovery path.
-- Projected attendance at the recovery point.
+- Required future attendance for course recovery.
+- Applicable future sessions contributing to the recovery path.
+- Projected course attendance at the recovery point.
 - Estimated recovery date where determinable.
 
-The result shall clearly communicate that the recovery projection assumes the identified recovery slots are successfully attended.
+The result shall clearly communicate that the recovery projection assumes the identified sessions are successfully attended.
 
 If available timetable/calendar data ends before the complete recovery path can be determined, AttendSense shall provide the mathematical recovery requirement but shall not invent unavailable future class occurrences.
 
@@ -870,30 +879,27 @@ Attendance Recovery analysis shall not modify the student's confirmed attendance
 
 When the student selects **Future Attendance Simulator**:
 
-1. AttendSense loads the latest confirmed overall attendance dataset.
+1. AttendSense loads the latest confirmed course-aware attendance dataset.
 2. No 75% eligibility restriction is applied.
 3. The student selects the desired future simulation period within the available academic timetable/calendar range.
-4. AttendSense generates the applicable scheduled lectures and laboratory sessions within that period.
+4. AttendSense generates applicable future sessions within that period using the confirmed timetable, confirmed Academic Calendar, course mapping, batch applicability, and date/time as appropriate.
 5. Holidays and other non-working academic days are excluded.
 6. Every displayed future class initially has the status **ATTEND**.
 7. The student may freely change one or multiple classes between:
    - **ATTEND**
    - **BUNK/MISS**
-8. AttendSense applies the relevant attendance-slot weights:
-   - Attended Lecture → Present +1, Effective Total +1.
-   - Missed Lecture → Present +0, Effective Total +1.
-   - Attended Lab → Present +2, Effective Total +2.
-   - Missed Lab → Present +0, Effective Total +2.
-9. AttendSense calculates the resulting predicted overall attendance.
+8. For each explicitly marked matched class:
+   - **ATTEND** increases projected conducted attendance and projected present attendance by one and leaves projected absent attendance unchanged.
+   - **BUNK/MISS** increases projected conducted attendance and projected absent attendance by one and leaves projected present attendance unchanged.
+9. AttendSense applies the scenario independently to each affected course record, maintaining theory/practical separation, and calculates the resulting projected course attendance. Overall attendance may be shown as supporting context where useful.
 10. The prediction may update interactively while the student changes the scenario.
 
 The simulator result may display:
 
-- Current confirmed overall attendance.
-- Future attended attendance slots.
-- Future missed attendance slots.
-- Predicted overall attendance.
-- Difference from the current attendance position.
+- Current confirmed course attendance.
+- Future attended and missed sessions.
+- Projected course attendance.
+- Difference from the current course attendance position.
 - Position relative to 75%.
 - Selected future attendance plan.
 
@@ -903,7 +909,7 @@ Future Attendance Simulator results shall not modify the student's latest confir
 
 ---
 
-## 4.13 Reuse of Latest Confirmed Attendance Flow
+## 4.13 Reuse and Persistence Flow
 
 Once the student has successfully confirmed attendance data, that dataset shall be available for repeated attendance analyses.
 
@@ -922,6 +928,8 @@ The student shall not be required to re-upload attendance merely because:
 
 Calculator and simulation outputs shall never automatically become confirmed attendance data.
 
+The confirmed timetable and confirmed Academic Calendar shall also be reused for applicable analysis features. The student shall not be required to upload either again merely because the application is reopened, another feature is selected, another calculation is performed, or the student signs back into the same account.
+
 ---
 
 ## 4.14 Attendance Update and Replacement Flow
@@ -931,12 +939,13 @@ When the student wants calculations based on newer official attendance informati
 1. The student selects **Update Attendance**.
 2. A newer PDF or image attendance dataset is provided.
 3. The complete processing workflow is performed:
-   - File Validation.
-   - Extraction.
-   - Normalization.
-   - Automatic validation.
-   - Student review.
-   - Student confirmation.
+    - File Validation.
+    - Extraction.
+    - Normalization.
+    - Automatic validation.
+    - Student review/edit.
+    - Student confirmation.
+    - Saving.
 4. If successfully confirmed and saved, the new dataset becomes the latest confirmed attendance dataset.
 5. Subsequent Safe Bunk, Recovery, and Future Simulation analyses use the newly confirmed dataset.
 
@@ -951,6 +960,14 @@ If the newer dataset:
 
 the previous confirmed attendance dataset shall remain active and unchanged.
 
+### Timetable Update and Replacement
+
+When the student needs to update the timetable, the student uploads a replacement timetable image or screenshot. AttendSense validates the input, extracts and validates structured timetable data, and allows the student to review, manually edit, confirm, and save it. The existing confirmed timetable shall remain active until the replacement has successfully completed the full workflow. A failed or rejected replacement shall not overwrite the existing confirmed timetable.
+
+### Academic Calendar Update and Replacement
+
+When the student needs to update the Academic Calendar, the student uploads a replacement official SPCE Academic Calendar PDF. AttendSense validates the input, extracts and validates structured calendar data, and allows the student to review, manually edit, confirm, and save it. The existing confirmed Academic Calendar shall remain active until the replacement has successfully completed the full workflow. A failed or rejected replacement shall not overwrite the existing confirmed Academic Calendar.
+
 ---
 
 ## 4.15 Result Flow
@@ -959,20 +976,21 @@ After completing an attendance analysis, AttendSense shall present a result appr
 
 Results may include:
 
-- Current confirmed overall attendance as supporting context.
-- Status relative to the fixed 75% threshold.
+- Confirmed applicable course attendance.
+- Projected course attendance.
+- Position of an applicable course relative to the fixed 75% threshold.
 - Safe/unsafe bunk-plan status.
-- Projected attendance after a Safe Bunk plan.
-- Required recovery attendance slots.
-- Projected recovery attendance.
+- Projected attendance for affected courses after a Safe Bunk plan.
+- Required future attendance for course recovery.
+- Projected course attendance at the recovery point.
 - Estimated recovery date where determinable.
-- Predicted attendance from a Future Attendance Simulation.
-- Relevant upcoming lecture/laboratory occurrences.
-- Relevant attendance-slot impact.
+- Projected course attendance from a Future Attendance Simulation.
+- Relevant upcoming sessions and affected courses.
+- Overall attendance as supporting context where useful.
 
 AttendSense shall clearly distinguish:
 
-- **Confirmed attendance data**
+- **Confirmed official attendance data**
 - **Calculated attendance requirements**
 - **Hypothetical/projected attendance results**
 
@@ -991,16 +1009,21 @@ Examples include:
 - Unreadable attendance image.
 - Invalid PDF.
 - Incomplete attendance information.
-- Required Present Slots cannot be reliably determined.
-- Required Total/Effective Total Slots cannot be reliably determined.
-- No Attendance information cannot be normalized reliably where required.
+- Missing confirmed timetable.
+- Missing confirmed Academic Calendar.
+- Invalid or unreadable timetable image.
+- Invalid, unreadable, or unsupported Academic Calendar PDF.
+- Extracted timetable or Academic Calendar data has not been confirmed.
+- Required course-aware attendance information cannot be reliably determined.
+- Required course code is unmatched or course mapping is ambiguous.
+- Batch applicability is uncertain.
+- Academic Calendar status is ambiguous.
+- Relevant non-attendance information cannot be normalized reliably where required.
 - Missing academic configuration.
-- Missing applicable timetable information.
-- Missing applicable academic-calendar information.
 - Invalid attendance values.
 - Attendance data has not been confirmed.
 - Applicable future timetable occurrence cannot be determined.
-- Required file-processing operation fails.
+- Required extraction, validation, or save operation fails.
 
 AttendSense shall display a clear error message indicating what the student needs to correct or retry.
 
@@ -1016,76 +1039,70 @@ The primary AttendSense workflow can be represented as:
 ↓  
 **Valid Session?**
 
-**Yes → Dashboard**
+**Yes → Restore Existing Account and Saved Data**
 
 **No → Sign in with Google**  
 ↓  
-**New User?**
+**Academic Context Available?**
 
-**Yes → Academic Configuration → Dashboard**
+**No → Academic Configuration → Save Academic Context**
 
-**No → Restore Existing Account → Dashboard**  
+↓  
+**Confirmed Timetable Available?**
+
+**No → Upload Timetable Image/Screenshot → Extract → Review/Edit → Confirm → Save**
+
+↓  
+**Confirmed Academic Calendar Available?**
+
+**No → Upload Official SPCE Academic Calendar PDF → Extract → Review/Edit → Confirm → Save**
+
+↓  
+**Dashboard / Today's Decision Center**
+
 ↓  
 **Confirmed Attendance Dataset Available?**
 
-**No → Provide Attendance PDF/Image**  
-↓  
-**File Validation**  
-↓  
-**Extraction**  
-↓  
-**Normalization**  
-↓  
-**Automatic Validation**  
-↓  
-**Student Review**  
-↓  
-**Student Confirmation**  
-↓  
-**Latest Confirmed Attendance Saved**
+**No → Import Attendance PDF/Image → Extract → Normalize/Validate → Review/Edit → Confirm → Save**
 
 **Yes → Use Existing Latest Confirmed Attendance**  
 ↓  
 **Select Analysis Feature**
 
-├── **Safe Bunk Calculator — Attendance >= 75%**  
+├── **Safe Bunk Calculator — Applicable Course Attendance at or Above 75%**  
 │   ↓  
-│   Today → End of Current Academic Week  
+│   Today's Remaining Applicable Classes Only  
 │   ↓  
-│   Classes Default to ATTEND  
+│   Student Selects Classes to Bunk  
 │   ↓  
-│   Student Marks Selected Classes as BUNK  
+│   Project Only Selected Skips by Matched Course  
 │   ↓  
-│   Apply Lecture/Lab Slot Weights  
-│   ↓  
-│   Safe / Unsafe Result  
+│   Safe / At Threshold / Below Threshold Result  
 │  
-├── **Attendance Recovery — Attendance < 75%**  
+├── **Attendance Recovery — Applicable Course Attendance Below 75%**  
 │   ↓  
-│   Calculate Required Recovery Slots  
+│   Calculate Required Future Attended Sessions  
 │   ↓  
-│   Map Slots to Future Timetable + Academic Calendar  
+│   Map to Applicable Future Timetable and Academic Calendar Sessions  
 │   ↓  
-│   Determine Recovery Path  
+│   Determine Recovery Path Where Coverage Allows  
 │   ↓  
 │   Recovery Result  
 │  
-└── **Future Attendance Simulator — Any Attendance %**  
+└── **Future Attendance Simulator — Any Confirmed Attendance Position**  
     ↓  
     Select Future Simulation Period  
     ↓  
-    Classes Default to ATTEND  
-    ↓  
     Student Creates ATTEND/BUNK Scenario  
     ↓  
-    Apply Lecture/Lab Slot Weights  
+    Project Each Matched Course Independently  
     ↓  
-    Predicted Overall Attendance
+    Hypothetical Course-Attendance Result
 
 ↓  
-**Modify Analysis / Select Another Feature / Update Attendance**
+**Modify Analysis / Select Another Feature / Update Attendance, Timetable, or Academic Calendar**
 
-All analysis features shall continue using the latest confirmed attendance dataset until a newer attendance dataset is successfully processed, reviewed, confirmed, and saved.
+All analysis features shall continue using the latest confirmed attendance dataset, timetable, and Academic Calendar until each is successfully replaced through its required review, confirmation, and saving workflow.
 
 # 5. Functional Requirements
 
