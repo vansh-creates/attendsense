@@ -2742,2838 +2742,631 @@ All calculations shall use deterministic mathematical logic, respect confirmed t
 
 ## 7.1 Purpose
 
-This section defines how AttendSense shall accept, process, extract, normalize, validate, review, confirm, and persist student-provided attendance information before that information becomes eligible for attendance analysis.
+This section defines how AttendSense shall accept, extract, normalize, validate, review, confirm, persist, and replace attendance data before it becomes eligible for Phase 1 attendance analysis.
 
-The primary objective is to ensure that Safe Bunk Calculator, Attendance Recovery Calculator, and Future Attendance Simulator operate only on attendance information that has been processed and confirmed with sufficient reliability.
-
-AttendSense shall prioritize **attendance-data correctness over producing a calculation result**.
-
-The required attendance-data pipeline shall be:
-
-**Attendance Input**  
-↓  
-**File Validation**  
-↓  
-**Extraction**  
-↓  
-**Normalization**  
-↓  
-**Automatic Validation**  
-↓  
-**Student Review**  
-↓  
-**Student Confirmation**  
-↓  
-**Successful Save**  
-↓  
-**Latest Confirmed Attendance Dataset**  
-↓  
-**Eligible for Attendance Analysis**
-
-Failure at any required stage shall prevent the newly submitted dataset from replacing the student's existing confirmed attendance dataset.
+The trusted calculation input shall be a confirmed, structured, course-aware attendance dataset. Raw uploaded PDF or image content shall not be passed directly to the deterministic calculation engine.
 
 ---
 
 ## 7.2 Supported Attendance Input
 
-AttendSense Phase 1 shall accept attendance information through:
+Phase 1 shall support attendance input through PDF, one image, or multiple images belonging to one attendance submission.
 
-- A supported PDF file.
-- One supported image.
-- Multiple supported images where the complete attendance information spans more than one image.
-
-Attendance files may be provided through:
-
-1. The in-application attendance input workflow.
-2. Supported PWA share-target functionality where technically available and successfully validated.
-
-Students shall not be required to manually identify the original attendance source, website, application, or layout before submitting a supported attendance file.
-
-Acceptance shall depend on whether AttendSense can reliably obtain the attendance information required for normalization and validation.
+Attendance input is separate from timetable input, which is image or screenshot only, and Academic Calendar input, which is PDF only. Attendance input may be supplied through in-application upload and, where technically supported and validated, the PWA share target.
 
 ---
 
-## 7.3 Required Attendance Information
+## 7.3 Primary Course-Aware Attendance Data
 
-The primary attendance values required by the Phase 1 calculation engine shall be:
+The Phase 1 calculation engine shall primarily use confirmed course-aware attendance records.
 
-- **Overall Present Slots**
-- **Overall Effective Total Slots**
+For each calculation-eligible course record, AttendSense shall preserve where available:
 
-Depending on the submitted attendance representation, AttendSense may also need to identify:
+- Course code.
+- Course name or label.
+- Conducted attendance.
+- Present attendance.
+- Absent attendance.
+- Theory or Practical identity where represented by the official course code.
+- Independently calculated course attendance percentage.
+- Calculation-eligibility status.
+- Validation, review, and relevant mapping metadata.
 
-- Displayed or reported Total Slots.
-- No Attendance slots.
-- Equivalent non-attendance slots.
-- Overall attendance percentage, where available.
-- Other values necessary to determine or validate the overall attendance dataset.
+For a valid course record:
 
-The system may extract additional information when useful for document interpretation or validation.
+**present + absent = conducted**
 
-However:
+For conducted greater than 0:
 
-**Individual subject-wise attendance percentages shall not form the basis of Phase 1 attendance calculations.**
+**Course Attendance Percentage = (present / conducted) × 100**
 
-Future lecture and laboratory information shall come from the applicable timetable and academic calendar rather than from subject-wise attendance percentages.
-
----
-
-## 7.4 Attendance Data Source Independence
-
-Different attendance representations may expose the same attendance information differently.
-
-For example:
-
-### Representation A
-
-The submitted attendance information may display:
-
-- Present Slots = 142
-- Total Slots = 188
-- No Attendance Slots = 21
-
-In this representation:
-
-**Effective Total Slots = 188 - 21 = 167**
-
-### Representation B
-
-Another attendance representation may already display:
-
-- Present Slots = 142
-- Total Slots = 167
-
-with No Attendance already excluded.
-
-In this case:
-
-**Effective Total Slots = 167**
-
-and AttendSense shall not subtract the No Attendance value again.
-
-The system shall therefore interpret the meaning of available attendance values rather than blindly assume that every displayed Total Slots value has the same meaning.
+Course-wise conducted, present, and absent values shall be the primary calculation basis for Safe Bunk Calculator, Attendance Recovery Calculator, and Future Attendance Simulator. Overall attendance may be retained only as supporting context or cross-validation.
 
 ---
 
-## 7.5 PDF Processing
+## 7.4 Course Identity and Conservative Mapping
 
-When the student provides attendance information through a supported PDF:
+Where a valid structured course code exists, it shall be the authoritative primary identity for the course record.
 
-1. AttendSense shall validate the PDF before extraction begins.
-2. The system shall attempt to obtain the attendance information required for the overall attendance dataset.
-3. Where reliable machine-readable text or structured information is available, the implementation should prefer reliable direct extraction where appropriate.
-4. The extracted information shall be converted into the normalized overall attendance structure.
-5. The normalized dataset shall proceed to automatic validation.
+AttendSense shall preserve the course code, course name or label where available, Theory or Practical identity, conducted, present, and absent values. Theory and Practical records with separate official course codes, including T-coded Theory and P-coded Practical records, shall remain separate and shall not be merged merely because their names are similar.
 
-The extraction workflow shall attempt to identify values such as:
+Minor OCR errors in a course name shall not invalidate an otherwise reliable structured course-code identity.
 
-- Overall Present Slots.
-- Displayed or reported Total Slots.
-- No Attendance or equivalent non-attendance slots, where applicable.
-- Overall attendance percentage, where available for validation.
-- Other values required to determine Overall Effective Total Slots reliably.
-
-If the required information cannot be extracted reliably, AttendSense shall not generate attendance-analysis results from that extraction.
-
-The student shall instead receive an appropriate processing failure or re-upload instruction.
+Code-less or ambiguous records, including activities whose course identity cannot be safely determined, may be retained for display or review. They shall be clearly marked as requiring review or not calculation-eligible and shall not silently participate in Safe Bunk, Recovery, or Future Attendance Simulator mathematics unless the required mapping is explicitly confirmed.
 
 ---
 
-## 7.6 Image Processing
+## 7.5 Attendance Processing Pipeline
 
-When the student provides attendance information through one or more supported images, AttendSense shall use the selected image-processing/OCR/vision mechanism to obtain the required attendance information.
-
-The extraction workflow shall attempt to identify values such as:
-
-- Overall Present Slots.
-- Displayed or reported Total Slots.
-- No Attendance or equivalent non-attendance slots, where applicable.
-- Overall attendance percentage, where available for validation.
-- Other information required to determine and validate Overall Effective Total Slots.
-
-The processing system shall account, where reasonably possible, for variations such as:
-
-- Image dimensions.
-- Device screen size.
-- Screenshot dimensions.
-- Cropping.
-- Text positioning.
-- Resolution.
-- Layout differences.
-
-AttendSense shall not be required to accept an image when the information required for reliable attendance interpretation is unreadable, missing, excessively cropped, or otherwise unusable.
-
-If reliable processing cannot be completed, the student shall be asked to provide clearer or more complete attendance information.
-
----
-
-## 7.7 Multiple Image Processing
-
-AttendSense shall support multiple images as part of a single attendance submission when the complete attendance information spans more than one image.
-
-All selected images belonging to that submission shall be treated as parts of one attendance-input operation.
-
-The system shall:
-
-1. Validate every submitted image.
-2. Process the relevant attendance information contained in each image.
-3. Identify complementary attendance information across the images.
-4. Detect overlapping or repeated information where reasonably possible.
-5. Prevent duplicated attendance information from being counted more than once.
-6. Combine the required information into one normalized overall attendance dataset.
-7. Determine whether the combined information is sufficient for reliable validation.
-
-The objective of multi-image processing shall be to construct **one reliable overall attendance dataset**, not independent subject-wise attendance datasets.
-
-If the images cannot be reliably combined, the submission shall not replace an existing confirmed dataset.
-
----
-
-## 7.8 Duplicate and Overlapping Information Detection
-
-AttendSense shall attempt to identify duplicated or overlapping attendance information within a multi-image attendance submission.
-
-Duplicated information shall not be counted multiple times merely because it appears in more than one submitted image.
-
-Detection may use relevant extracted information such as:
-
-- Identical attendance values.
-- Repeated headings.
-- Repeated rows.
-- Overlapping page/screenshot sections.
-- Repeated overall attendance summaries.
-- Other document characteristics available to the selected extraction implementation.
-
-Where two pieces of extracted information clearly represent the same attendance information, they shall be treated as duplicated rather than additive.
-
-If conflicting overlapping information cannot be resolved reliably, AttendSense shall not silently choose one value.
-
-The affected submission shall instead fail the required validation or processing workflow.
-
----
-
-# 7.9 Attendance Data Normalization
-
-## 7.9.1 Standard Internal Attendance Structure
-
-Regardless of whether attendance information originates from a PDF, one image, or multiple images, the successfully interpreted data shall be normalized into a consistent internal structure.
-
-The normalized Phase 1 attendance dataset shall contain the information required for overall attendance analysis, including:
-
-- **Overall Present Slots**
-- **Overall Effective Total Slots**
-- Displayed/Reported Total Slots, where relevant.
-- No Attendance or equivalent non-attendance slots, where applicable.
-- Independently Calculated Overall Attendance Percentage.
-- Relevant validation metadata required by the implementation.
-
-Raw PDF/image content shall not be passed directly to the attendance calculation engine.
-
----
-
-## 7.9.2 No Attendance Normalization
-
-Where the displayed Total Slots includes No Attendance or equivalent non-attendance slots:
-
-**Effective Total Slots = Displayed Total Slots - No Attendance Slots**
-
-### Example
-
-If:
-
-**Displayed Total Slots = 188**
-
-and:
-
-**No Attendance Slots = 21**
-
-then:
-
-**Effective Total Slots = 167**
-
-Attendance calculations shall use `167`, not `188`.
-
-If the submitted attendance representation already provides a valid total with No Attendance excluded:
-
-**Effective Total Slots = Reported Total Slots**
-
-No second subtraction shall occur.
-
----
-
-## 7.9.3 No Double Subtraction
-
-AttendSense shall prevent No Attendance slots from being subtracted more than once.
-
-The normalization workflow shall determine whether:
-
-1. The displayed total includes No Attendance slots, or
-2. The displayed total already excludes No Attendance slots.
-
-Only the first case shall require subtraction.
-
-If the system cannot reliably determine which interpretation applies, the newly submitted dataset shall not proceed to confirmation as valid attendance data.
-
----
-
-# 7.10 Automatic Attendance Validation
-
-## 7.10.1 Core Value Validation
-
-Before student confirmation, AttendSense shall automatically validate the normalized attendance dataset.
-
-Validation shall include:
-
-- `Overall Present Slots >= 0`
-- `Overall Effective Total Slots > 0`
-- `Overall Present Slots <= Overall Effective Total Slots`
-- `No Attendance Slots >= 0`, where applicable.
-- Calculated attendance percentage must be within `0%–100%`.
-- Required attendance values must be present.
-- Normalized values must be internally consistent.
-
-A dataset that fails required validation shall not become a confirmed attendance dataset.
-
----
-
-## 7.10.2 Independent Attendance Percentage Validation
-
-AttendSense shall independently calculate:
-
-**Overall Attendance Percentage = (Overall Present Slots / Overall Effective Total Slots) × 100**
-
-The independently calculated value shall be used by AttendSense for attendance analysis.
-
-If the uploaded attendance information also provides an overall attendance percentage, AttendSense may compare the reported percentage with its independently calculated percentage.
-
-Small differences attributable only to legitimate display rounding may be accepted.
-
-Material inconsistencies shall trigger further validation or processing failure rather than being silently ignored.
-
----
-
-## 7.10.3 Effective Total Validation
-
-Where No Attendance normalization has been applied, AttendSense shall validate that:
-
-**Effective Total Slots = Displayed Total Slots - No Attendance Slots**
-
-where applicable.
-
-The resulting Effective Total Slots shall:
-
-- Not be negative.
-- Not be zero when attendance percentage calculation is required.
-- Not be lower than Present Slots.
-
----
-
-## 7.10.4 Multi-Image Validation
-
-For multiple-image submissions, AttendSense shall validate that:
-
-- Required attendance information was not omitted because of missing screenshots.
-- Overlapping information was not counted more than once.
-- Conflicting values have not been silently merged.
-- The combined submission provides sufficient information to determine the required overall attendance values reliably.
-
----
-
-# 7.11 Extraction Reliability
-
-Attendance extraction shall be treated as an **input-processing mechanism**, not as an unquestionable source of truth.
-
-AttendSense shall not intentionally:
-
-- Guess unreadable attendance numbers.
-- Invent missing attendance values.
-- Replace uncertain values with assumed values.
-- Ignore significant inconsistencies.
-- Count duplicated information more than once.
-- Produce attendance-analysis results from unreliable extracted data.
-
-If reliable extraction cannot be achieved, the new attendance submission shall stop before confirmation.
-
-The student shall receive an appropriate corrective action such as providing:
-
-- A clearer image.
-- A more complete screenshot.
-- Missing additional images.
-- A valid PDF.
-- Another supported attendance input.
-
----
-
-# 7.12 Student Review
-
-## 7.12.1 Mandatory Review Screen
-
-After extraction, normalization, and automatic validation succeed, AttendSense shall present the interpreted attendance dataset to the student for mandatory review.
-
-The review screen shall prominently display relevant values such as:
-
-- **Overall Present Slots**
-- **Overall Effective Total Slots**
-- Displayed/Reported Total Slots, where relevant.
-- No Attendance Slots, where relevant.
-- Independently Calculated Overall Attendance Percentage.
-
-The interface shall clearly communicate that the student must verify whether AttendSense has interpreted the submitted attendance information correctly.
-
----
-
-## 7.12.2 Review Purpose
-
-Student review exists as an additional reliability layer because even a technically successful document-processing operation may potentially misinterpret information.
-
-The review step shall allow the student to answer:
-
-**"Has AttendSense correctly interpreted the attendance information I provided?"**
-
-The student shall not be asked to approve or verify the mathematical formulas used by the calculation engine.
-
----
-
-# 7.13 Student Confirmation
-
-The student shall explicitly confirm the interpreted attendance dataset before the new dataset becomes eligible for attendance analysis.
-
-The required workflow shall be:
+Attendance processing shall follow this conceptual sequence:
 
 **Attendance Input**  
 ↓  
-**File Validation**  
+**File/Input Validation**  
 ↓  
-**Extraction**  
+**Course-Aware Attendance Extraction**  
 ↓  
-**Normalization**  
+**Structured Course-Aware Data / Normalization**  
 ↓  
-**Automatic Validation**  
+**Automatic Course/Record Validation**  
 ↓  
-**Student Review**  
-↓  
-**Student Confirmation**
-
-### If Confirmed
-
-The system shall attempt to save the confirmed attendance dataset.
-
-After successful saving:
-
-**New Dataset → Latest Confirmed Attendance Dataset**
-
-The dataset shall then become available to:
-
-- Safe Bunk Calculator.
-- Attendance Recovery Calculator.
-- Future Attendance Simulator.
-
-### If Rejected
-
-The newly interpreted dataset shall:
-
-- Not become confirmed attendance data.
-- Not be used by the calculation engine.
-- Not replace a previous confirmed attendance dataset.
-
-The student shall be allowed to provide attendance information again.
-
----
-
-# 7.14 Incorrect Extraction Handling
-
-If the student identifies incorrect attendance information during the review stage, the student shall be able to reject the interpreted dataset.
-
-Examples may include:
-
-- Incorrect Present Slots.
-- Incorrect Total Slots.
-- Incorrect No Attendance interpretation.
-- Incorrect Effective Total Slots.
-- Missing information.
-- Duplicated information.
-- Incorrectly combined multiple images.
-
-Phase 1 shall not rely on manual modification of extracted attendance counts as the normal correction mechanism.
-
-Instead, the student shall provide attendance information again so that the extraction and validation workflow can be repeated.
-
----
-
-# 7.15 Missing or Incomplete Attendance Information
-
-AttendSense shall not proceed with confirmation of a new attendance dataset when information required for reliable overall attendance calculation cannot be determined.
-
-Examples include:
-
-- Missing Overall Present Slots.
-- Missing Total/Effective Total information.
-- Required No Attendance information is missing.
-- No Attendance interpretation cannot be determined reliably.
-- Partially visible required values.
-- Excessively cropped image.
-- Missing image from a multi-image submission.
-- Incomplete PDF extraction.
-- Contradictory extracted values.
-- Required attendance values cannot be interpreted reliably.
-
-AttendSense shall clearly communicate that the attendance submission could not be reliably processed.
-
----
-
-# 7.16 Invalid Upload Handling
-
-AttendSense shall reject files that cannot be accepted by the supported attendance-input workflow.
-
-Examples may include:
-
-- Unsupported file type.
-- Corrupted file.
-- Empty file.
-- Unreadable image.
-- Invalid PDF.
-- Unsupported image format.
-- File exceeding configured technical limits.
-- Excessive image count.
-- File containing no identifiable attendance information.
-
-The UI shall display a clear error and allow the student to provide attendance information again.
-
-Exact:
-
-- File-size limits.
-- Supported image extensions.
-- Maximum image count.
-- Processing limits.
-
-shall be finalized during technical implementation/evaluation according to the selected document-processing architecture.
-
----
-
-# 7.17 Latest Confirmed Attendance Dataset
-
-After a student successfully confirms an attendance dataset and the system successfully saves it, that dataset shall become:
-
-**Latest Confirmed Attendance Dataset**
-
-The latest confirmed attendance dataset shall remain the active attendance source for:
-
-- Safe Bunk Calculator.
-- Attendance Recovery Calculator.
-- Future Attendance Simulator.
-
-The student shall not be required to upload attendance again merely because they want to use another analysis feature.
-
----
-
-## 7.17.1 Dataset Reuse Example
-
-Suppose the latest confirmed dataset is:
-
-- Present Slots = 142
-- Effective Total Slots = 167
-
-The student performs:
-
-**Safe Bunk Calculator**
-
-The calculator starts from:
-
-**142 / 167**
-
-The student then opens:
-
-**Future Attendance Simulator**
-
-The simulator shall again start from:
-
-**142 / 167**
-
-The Safe Bunk result shall not become the Future Simulator's starting attendance.
-
-The same rule shall apply across all analysis features.
-
----
-
-# 7.18 Attendance Data Update
-
-Students shall be able to provide newer attendance information whenever they want future analyses to use newer official attendance data.
-
-Providing newer attendance data shall begin a new processing workflow.
-
-The new attendance data shall not immediately replace the current latest confirmed attendance dataset.
-
-Instead, the new dataset must complete:
-
-**Input**  
-↓  
-**File Validation**  
-↓  
-**Extraction**  
-↓  
-**Normalization**  
-↓  
-**Automatic Validation**  
-↓  
-**Student Review**  
-↓  
-**Student Confirmation**  
-↓  
-**Successful Save**
-
-Only after successful completion shall it replace the previous confirmed dataset.
-
----
-
-# 7.19 Safe Dataset Replacement
-
-Suppose the student currently has:
-
-**Dataset A — Confirmed**
-
-and then provides:
-
-**Dataset B — New Upload**
-
-Dataset A shall remain active while Dataset B is being processed.
-
-### If Dataset B succeeds
-
-**Dataset B → Latest Confirmed Dataset**
-
-**Dataset A → Replaced**
-
-### If Dataset B fails
-
-Because of:
-
-- Extraction failure.
-- Validation failure.
-- Incomplete information.
-- Student rejection.
-- Save failure.
-- Other required processing failure.
-
-then:
-
-**Dataset A → Remains Latest Confirmed Dataset**
-
-Dataset B shall not replace it.
-
----
-
-# 7.20 Attendance Data Freshness
-
-AttendSense shall not claim that persisted attendance information is automatically synchronized with an external official attendance system.
-
-The latest confirmed attendance dataset represents:
-
-> The latest attendance information successfully provided and confirmed by the student within AttendSense.
-
-AttendSense shall therefore allow the student to update attendance whenever they want calculations based on newer official attendance information.
-
-The application may display contextual information indicating when the confirmed dataset was last updated.
-
-AttendSense shall not automatically modify the confirmed dataset based on:
-
-- Safe Bunk plans.
-- Recovery plans.
-- Future Attendance Simulations.
-- Assumed attendance.
-- Passage of calendar time.
-
-Only a newly processed and confirmed attendance submission shall replace it.
-
----
-
-# 7.21 Timetable and Attendance Data Separation
-
-Uploaded attendance data and future timetable information shall serve different purposes.
-
-### Uploaded Attendance Data
-
-Provides the base confirmed values:
-
-- Overall Present Slots.
-- Overall Effective Total Slots.
-
-### Timetable
-
-Provides future academic occurrences such as:
-
-- Lecture occurrences.
-- Laboratory occurrences.
-- Dates/times where applicable.
-- Lecture/laboratory classification.
-
-### Academic Calendar
-
-Determines whether a timetable occurrence is valid on a particular date.
-
-Therefore:
-
-**Confirmed Attendance Dataset**  
-+
-**Timetable**  
-+
-**Academic Calendar**  
-+
-**Attendance Slot Weights**
-
-shall form the inputs required for schedule-aware future attendance analysis.
-
-AttendSense shall not attempt to associate independent subject-wise attendance percentages with timetable entries for Phase 1 calculations.
-
----
-
-# 7.22 Lecture and Laboratory Classification
-
-The predefined timetable shall identify whether each applicable future academic event is:
-
-- A Lecture, or
-- A Laboratory Session.
-
-The classification shall determine the attendance-slot weight:
-
-**Lecture = 1 Attendance Slot**
-
-**Laboratory Session = 2 Attendance Slots**
-
-This classification shall be used for future attendance analysis and shall not depend on separate subject-wise attendance percentages extracted from the uploaded attendance document.
-
----
-
-# 7.23 Processing Feedback
-
-AttendSense shall provide clear interface feedback during attendance-data processing.
-
-Relevant states may include:
-
-- File selected.
-- Uploading.
-- File validation.
-- Processing.
-- Extracting attendance information.
-- Normalizing attendance information.
-- Validating attendance information.
-- Preparing review.
-- Ready for student review.
-- Confirmation in progress.
-- Attendance saved successfully.
-- Processing failed.
-- Validation failed.
-- Save failed.
-
-The student shall not be left with an apparently inactive interface while processing is occurring.
-
----
-
-# 7.24 Validation Failure Handling
-
-If a new attendance dataset fails required validation, AttendSense shall:
-
-1. Prevent the dataset from becoming confirmed attendance data.
-2. Prevent the dataset from being used by the attendance calculation engine.
-3. Clearly communicate that the attendance information could not be reliably verified.
-4. Avoid presenting Safe Bunk, Recovery, or Future Simulator results from that invalid dataset.
-5. Allow the student to provide attendance information again.
-6. Preserve the previous confirmed attendance dataset where one exists.
-
-AttendSense shall prioritize reliability over producing a result from uncertain data.
-
----
-
-# 7.25 Save Failure Handling
-
-Student confirmation alone shall not replace the existing latest confirmed attendance dataset unless the newly confirmed dataset is also successfully saved.
-
-If:
-
-**Student Confirmation = Successful**
-
-but:
-
-**Dataset Save = Failed**
-
-then the previously saved confirmed attendance dataset shall remain active.
-
-AttendSense shall notify the student that the newly confirmed data could not be saved successfully.
-
-The new dataset shall not be treated as the persisted latest confirmed attendance dataset until saving succeeds.
-
----
-
-# 7.26 Raw Attendance File Handling
-
-Raw uploaded PDF/image files shall be treated separately from the normalized attendance dataset used by the calculation engine.
-
-The calculation engine shall operate on:
-
-**Validated + Confirmed + Saved Normalized Attendance Data**
-
-and not directly on raw uploaded document content.
-
-The exact storage duration, temporary-processing behavior, and deletion policy for raw uploaded attendance files shall be determined during technical architecture and security evaluation.
-
-AttendSense shall avoid retaining raw attendance files longer than necessary unless retention is specifically required by the selected architecture.
-
----
-
-# 7.27 Extraction Technology Principle
-
-The PRD shall not lock a specific OCR, computer-vision, or PDF-parsing technology before technical evaluation.
-
-The selected technology or combination of technologies must demonstrate sufficient reliability for the supported Phase 1 attendance inputs.
-
-Technical evaluation shall consider factors such as:
-
-- Extraction accuracy.
-- PDF compatibility.
-- Image-layout compatibility.
-- Multi-image processing capability.
-- No Attendance detection capability.
-- Structured-data extraction capability.
-- Processing latency.
-- Cost.
-- Privacy implications.
-- Security.
-- Development complexity.
-- PWA/backend compatibility.
-
-Regardless of the selected extraction technology, the mandatory validation and student-confirmation workflow shall remain in place.
-
----
-
-# 7.28 Mandatory Student Confirmation Principle
-
-Student confirmation shall remain mandatory even if technical testing demonstrates very high attendance-extraction accuracy.
-
-This requirement exists because even a small extraction error may materially affect attendance calculations.
-
-Therefore:
-
-**High Extraction Accuracy ≠ Removal of Student Confirmation**
-
-The final Phase 1 workflow shall retain:
-
-**Automatic Processing + Automatic Validation + Student Review + Student Confirmation**
-
-before newly submitted attendance data becomes eligible for analysis.
-
----
-
-# 7.29 No Assumed Attendance Updates
-
-AttendSense shall not infer that a future class was actually attended or missed merely because:
-
-- The student marked it ATTEND in Safe Bunk.
-- The student marked it BUNK in Safe Bunk.
-- It appeared in a recovery plan.
-- It was marked ATTEND in Future Simulator.
-- It was marked BUNK/MISS in Future Simulator.
-- The scheduled date has passed.
-
-These selections are planning or simulation inputs only.
-
-They shall not update:
-
-- Confirmed Present Slots.
-- Confirmed Effective Total Slots.
-- The latest confirmed attendance dataset.
-
-Officially updated attendance values shall only enter AttendSense through a newly processed and confirmed attendance submission.
-
----
-
-# 7.30 Final Attendance Data Processing Rule
-
-A newly submitted attendance dataset shall become eligible for attendance analysis only after successfully completing all required stages:
-
-**Supported Attendance Input**  
-↓  
-**File Validation**  
-↓  
-**Successful Attendance Extraction**  
-↓  
-**Attendance Data Normalization**  
-↓  
-**No Attendance Handling Where Required**  
-↓  
-**Automatic Validation**  
-↓  
-**Student Review**  
+**Student Review/Edit**  
 ↓  
 **Student Confirmation**  
 ↓  
 **Successful Save**  
 ↓  
-**Latest Confirmed Attendance Dataset**  
+**Latest Confirmed Course-Aware Attendance Dataset**  
 ↓  
 **Eligible for Attendance Analysis**
 
-Failure at any mandatory stage shall prevent the new dataset from replacing the student's existing latest confirmed attendance dataset.
+Failure at any mandatory stage shall prevent the new dataset from replacing the existing confirmed dataset.
 
-The previous confirmed attendance dataset shall remain active whenever a newer submission fails before successful replacement.
+---
 
-Safe Bunk Calculator, Attendance Recovery Calculator, and Future Attendance Simulator shall operate only from the active latest confirmed attendance dataset.
+## 7.6 Course-Aware Extraction
+
+For PDF, one-image, and multiple-image attendance input, AttendSense shall attempt to extract the course-aware information required for approved calculations, including where available:
+
+- Structured course code and course name or label.
+- Conducted, present, and absent values.
+- Theory or Practical identity where represented.
+- Reported course percentage for validation.
+- Overall attendance information for supporting context or cross-validation.
+- No Attendance or equivalent information relevant to normalization.
+
+Where reliable machine-readable or structured PDF data exists, direct extraction may be preferred. The objective shall be a course-aware dataset, not an overall-only attendance dataset.
+
+Image extraction may use OCR, vision, or other document-processing methods and shall reasonably account for image dimensions, device or screenshot dimensions, cropping, resolution, layout differences, and text positioning.
+
+If calculation-critical information cannot be obtained reliably, the affected record shall not silently become calculation-eligible.
+
+---
+
+## 7.7 Multiple-Image, Duplicate, and Overlap Handling
+
+Multiple images belonging to one attendance submission shall be processed as one submission. AttendSense shall validate every image, extract course-aware records, combine complementary information, detect repeated or overlapping information, preserve reliable course identity, and determine calculation-eligibility and review state for each record.
+
+Where two extracted pieces clearly represent the same course attendance record, AttendSense shall not count them twice. Reliable identifiers, especially structured course code, shall be used where available.
+
+If overlapping records conflict materially and the conflict cannot be resolved safely, AttendSense shall not silently choose a value. It shall require review or correction and prevent unreliable values from becoming calculation-eligible.
+
+The objective is one confirmed dataset containing course-aware attendance records, not a single overall-only calculation value.
+
+---
+
+## 7.8 Normalized Course-Aware Dataset
+
+The normalized dataset shall contain one latest confirmed attendance dataset with one or more course records. Each course record shall contain course identity, Theory or Practical identity where applicable, conducted, present, absent, independently calculated percentage, calculation eligibility, and validation or review metadata.
+
+Supporting overall attendance or normalization information may be retained where valid and useful. Raw PDFs and images shall remain separate from this structured data.
+
+### 7.8.1 No Attendance Normalization
+
+Where relevant, if a displayed total includes No Attendance, a supporting normalized total may use:
+
+**Effective Total = Displayed Total - No Attendance**
+
+If the displayed total already excludes No Attendance, AttendSense shall not subtract it again.
+
+This normalization may support document interpretation, overall attendance display, cross-validation, or consistency checking. It shall not replace course-wise conducted, present, and absent records as the primary calculation basis.
+
+---
+
+## 7.9 Automatic Course Record Validation
+
+Before a course record becomes calculation-eligible, AttendSense shall validate:
+
+- Conducted, present, and absent values are non-negative.
+- Present plus absent equals conducted.
+- Present and absent do not exceed conducted.
+- Required calculation-critical fields are present.
+- Course identity is reliable enough for calculation eligibility.
+- Theory and Practical separation is preserved where applicable.
+- Duplicate records are not double-counted.
+
+For conducted greater than 0, the calculated percentage shall be within 0% to 100%. For conducted equal to 0, AttendSense shall not divide by zero or make a percentage-based attendance decision; the record shall be handled conservatively according to the approved review and calculation rules.
+
+For each valid course record, AttendSense shall independently calculate:
+
+**Course Attendance Percentage = (present / conducted) × 100**
+
+This independently calculated value shall be authoritative for calculation logic. Where an uploaded representation also shows a course percentage, AttendSense may compare it for validation. Small legitimate display-rounding differences may be accepted; material inconsistencies shall trigger review, correction, or processing or validation failure rather than being silently ignored.
+
+Overall attendance may also be independently calculated where reliable and useful, but only as supporting context or cross-validation. AttendSense shall use full available precision internally, round only for student-facing display, and avoid premature rounding in threshold-related validation or calculation.
+
+---
+
+## 7.10 Student Review, Editing, Confirmation, and Save
+
+A mandatory review screen shall prominently show calculation-relevant course records. For each relevant course, it shall display where available:
+
+- Course code and course name or label.
+- Theory or Practical identity.
+- Conducted, present, and absent values.
+- Independently calculated percentage.
+- Any warning, mapping, validation, or review state.
+
+Supporting overall or No Attendance information may also be displayed where useful.
+
+The student shall be allowed to manually correct incorrect extracted structured data before confirmation. After a manual correction, automatic validation shall run again, the corrected data shall satisfy the required invariants, and the student shall explicitly confirm the data before it can become trusted. The student may reject or re-upload attendance information, but re-upload shall not be the only correction path.
+
+Student confirmation shall remain mandatory even when extraction confidence is high. Only validated, confirmed, and successfully saved structured course-aware data shall become the latest confirmed attendance dataset. Confirmation alone shall not replace the previous persisted dataset; if saving fails, the previous confirmed dataset shall remain active.
+
+---
+
+## 7.11 Latest Confirmed Dataset, Replacement, and Freshness
+
+The latest confirmed attendance dataset shall provide the starting course records for attendance analysis. Safe Bunk shall start from the relevant latest confirmed course record, Future Attendance Simulator shall start again from those same confirmed course records, and Attendance Recovery shall start from the relevant confirmed course record.
+
+A previous calculator projection, recovery plan, or simulation result shall not become the base state for a subsequent calculator. Calculator and simulator results shall not modify confirmed conducted, present, absent, or latest-confirmed-dataset values.
+
+If Dataset A is confirmed and Dataset B is newly uploaded, Dataset A shall remain active while Dataset B is processed. Dataset B shall replace Dataset A only after it successfully completes Input, Validation, Extraction, Normalization, Automatic Validation, Review/Edit, Confirmation, and Successful Save. If Dataset B fails, is rejected, or is not saved, Dataset A shall remain active.
+
+AttendSense shall not automatically synchronize attendance with an external ERP or college system. The latest confirmed attendance dataset means the latest official attendance information successfully provided, reviewed or edited, confirmed, and saved by the student in AttendSense. Passage of time, attendance planning, and simulation do not update confirmed attendance; only a newer confirmed attendance submission may replace it.
+
+---
+
+## 7.12 Attendance, Timetable, and Academic Calendar Separation
+
+The confirmed attendance dataset shall provide course identity; conducted, present, and absent values; calculated course percentage; and supporting overall information where available.
+
+The confirmed student-uploaded timetable shall provide scheduled sessions; day, date, and time; course or session identity; Theory or Practical distinction; batch applicability; and continuous multi-period session structure.
+
+The confirmed student-uploaded Academic Calendar shall provide Teaching, Teaching Continues, Non-Teaching, Unknown or Requires Review, and relevant applicability or scope metadata.
+
+Schedule-aware calculations shall combine these inputs through course-code mapping, batch applicability, date or time, and calendar applicability.
+
+---
+
+## 7.13 Confirmed Future Session Rule
+
+One confirmed scheduled attendance event shall equal one future attendance occurrence for its matched course.
+
+If a practical or laboratory session spans multiple timetable periods but the confirmed timetable identifies it as one continuous session, it shall count as one scheduled attendance event.
+
+Theory and Practical records shall remain separate where their official course codes are separate. AttendSense shall not apply a universal lecture, laboratory, or duration-based attendance weighting rule.
+
+---
+
+## 7.14 Processing Feedback and Failure Handling
+
+Where useful, AttendSense shall provide clear processing feedback, including file selected, uploading, validation, extraction, normalization or structured processing, automatic validation, preparing review, ready for review/edit, confirmation, saving, success, processing failure, validation failure, and save failure.
+
+If a new dataset fails required validation, it shall not become confirmed or be used for calculations. AttendSense shall provide a clear explanation, preserve the previous confirmed dataset, and allow the student to correct or review the data where appropriate or provide attendance information again.
+
+---
+
+## 7.15 Raw Files, Extraction Technology, and No Assumed Updates
+
+AttendSense shall preserve the conceptual separation between raw uploaded PDF or image files and validated, confirmed, and saved normalized course-aware attendance data. The deterministic calculation engine shall operate only on structured confirmed data, not raw documents.
+
+Core extraction feasibility has been validated on tested samples for attendance PDFs, attendance images, multiple-image handling, timetable screenshots, Academic Calendar PDFs, and course-code-first calculation-critical extraction. The exact production extraction implementation may be finalized during implementation. This validation does not imply universally perfect extraction or production readiness.
+
+Selecting a class for bunk in Safe Bunk, including a class in a Recovery plan, marking a class ATTEND or BUNK/MISS in Future Attendance Simulator, or the passage of a scheduled date shall not update confirmed conducted, present, absent, or the latest confirmed attendance dataset. Only newer official attendance information that successfully completes processing, validation, review/edit, confirmation, and saving may update confirmed attendance.
+
+---
+
+## 7.16 Final Attendance Data Processing Rule
+
+The final Phase 1 attendance-data model shall be:
+
+**Supported Attendance Input**  
+↓  
+**File/Input Validation**  
+↓  
+**Course-Aware Attendance Extraction**  
+↓  
+**Structured Data / Normalization**  
+↓  
+**Automatic Course/Record Validation**  
+↓  
+**Student Review/Edit**  
+↓  
+**Student Confirmation**  
+↓  
+**Successful Save**  
+↓  
+**Latest Confirmed Course-Aware Attendance Dataset**  
+↓  
+**Eligible for Attendance Analysis**
+
+Failure at any mandatory stage shall prevent the new dataset from replacing the existing confirmed dataset.
 
 # 8. UI/UX and PWA Requirements
 
-## 8.1 UI/UX Objective
+## 8.1 Experience Principles and Primary Views
 
-AttendSense shall provide a **modern, attractive, interactive, intuitive, and student-focused user experience**.
+AttendSense Phase 1 shall provide a modern, polished, student-focused interface with mobile-first responsive design, fast navigation, clear visual hierarchy, readable and accessible interaction, consistent design patterns, and interactive planning.
 
-The application shall not feel like a basic attendance-percentage calculator.
+The UI may combine functions where this improves usability, but shall provide access to:
 
-The visual and interaction design shall make attendance planning easy to understand while preserving the reliability requirements defined elsewhere in this PRD.
+1. Welcome and Google Authentication.
+2. First-Time Academic Configuration.
+3. Timetable upload, review/edit, confirmation, and replacement.
+4. Academic Calendar upload, review/edit, confirmation, and replacement.
+5. Student Dashboard and Today's Decision Center.
+6. Attendance upload or update, processing, review/edit, and confirmation.
+7. Safe Bunk Calculator, Attendance Recovery Calculator, and Future Attendance Simulator.
+8. Analysis result views and profile or academic settings.
 
-The interface shall prioritize:
-
-- Simplicity.
-- Fast navigation.
-- Clear visual hierarchy.
-- Modern visual design.
-- Interactive attendance planning.
-- Minimal unnecessary steps.
-- Mobile usability.
-- Visual consistency.
-- Immediate interaction feedback.
-- Clear distinction between confirmed and hypothetical attendance.
-- Easy interpretation of attendance-analysis results.
-- Student-friendly language.
-
-The interface shall avoid unnecessary complexity while making the three primary attendance-analysis capabilities easy to discover and use:
-
-1. Safe Bunk Calculator.
-2. Attendance Recovery Calculator.
-3. Future Attendance Simulator.
+There shall be no separate standalone calculation feature for current attendance.
 
 ---
 
-## 8.2 Mobile-First Design
+## 8.2 Authentication and First-Time Academic Setup
 
-AttendSense shall follow a **mobile-first design approach**.
+The welcome flow shall support Google Authentication and clearly guide a first-time student through missing required setup inputs.
 
-The primary UX shall be designed around students using AttendSense from a smartphone, particularly as an installed PWA.
+Academic configuration shall not automatically assign or associate a timetable or Academic Calendar.
 
-The application shall also remain fully usable on:
+The student shall provide:
 
-- Smartphones.
-- Tablets.
-- Laptops.
-- Desktop computers.
+- A timetable as an image or screenshot only, using Upload, Extract, Validate, Review/Edit, Confirm, and Save.
+- The official SPCE Academic Calendar as a PDF only, using Upload, Extract, Validate, Review/Edit, Confirm, and Save.
 
-Layouts, navigation, cards, buttons, upload controls, schedule interfaces, attendance-selection controls, forms, dialogs, and result views shall adapt appropriately to different screen sizes.
-
-The desktop experience shall not simply stretch the mobile interface unnecessarily.
-
-Larger displays may use additional horizontal space to improve readability and information organization while preserving the same functionality.
+The student shall not be required to construct either document from scratch. Each confirmed item shall remain active until explicitly and successfully replaced.
 
 ---
 
-## 8.3 Design Quality Principle
+## 8.3 Timetable and Academic Calendar Review
 
-AttendSense shall aim for a polished product-level experience rather than a purely functional academic project interface.
+The timetable review UI shall show extracted calculation-relevant information where available, including day, start and end time, course or session identity, course code, Theory or Practical identity, batch applicability, and continuous multi-period session structure.
 
-The design shall use a coherent system for:
+The Academic Calendar review UI shall show relevant classifications and scope information, including Teaching, Teaching Continues, Non-Teaching, Unknown or Requires Review, and applicable metadata where relevant.
 
-- Typography.
-- Spacing.
-- Cards.
-- Surfaces.
-- Icons.
-- Buttons.
-- Forms.
-- Status indicators.
-- Progress states.
-- Dialogs.
-- Navigation.
-- Interactive timetable elements.
-- Result presentation.
+The student shall be able to manually correct extracted timetable or Academic Calendar information before confirmation. Unknown or ambiguous batch, course-mapping, or calendar information shall be visibly reviewable rather than silently guessed.
 
-Visual effects, motion, gradients, depth, or other contemporary design techniques may be used where they improve the experience.
-
-Such visual treatments shall not reduce:
-
-- Readability.
-- Accessibility.
-- Performance.
-- Clarity.
-- Interaction reliability.
-
-The interface shall prioritize **usefulness first and visual polish second**, while aiming to achieve both.
+After confirmation and successful save, each item shall remain active until replaced. A failed replacement shall not overwrite the previous confirmed timetable or Academic Calendar.
 
 ---
 
-## 8.4 Primary Screens and Views
+## 8.4 Dashboard and Today's Decision Center
 
-The Phase 1 application shall include the functionality represented by the following primary screens or views:
+The dashboard shall provide clear access to Today's Decision Center and Safe Bunk, Attendance Recovery, Future Attendance Simulator, attendance upload or update, timetable setup or replacement, Academic Calendar setup or replacement, and relevant account or academic settings.
 
-1. **Welcome / Authentication**
-2. **First-Time Academic Setup**
-3. **Student Dashboard**
-4. **Attendance Upload / Update**
-5. **Attendance Processing**
-6. **Attendance Review and Confirmation**
-7. **Safe Bunk Calculator**
-8. **Attendance Recovery Calculator**
-9. **Future Attendance Simulator**
-10. **Attendance Analysis Result Views**
-11. **Profile / Academic Settings**
+Where useful, dashboard context may show the latest confirmed attendance update, course-level attendance status, courses at or above 75%, courses below 75%, timetable or calendar confirmation status, and overall attendance as supporting context.
 
-These functions may be combined into fewer screens, drawers, sheets, dialogs, tabs, or contextual views where doing so improves usability.
+Course-aware eligibility shall be clear:
 
-**Current Attendance Calculation shall not exist as a separate calculator or standalone primary screen.**
+- Safe Bunk applies to relevant confirmed course records at or above 75%.
+- Recovery applies to relevant confirmed course records below 75%.
+- Future Simulator is available at any attendance percentage once required confirmed data exists.
 
-The student's current confirmed overall attendance may instead be displayed as contextual information where useful.
+Overall attendance shall not be the primary dashboard model or the sole eligibility basis for any analysis feature.
 
 ---
 
-## 8.5 Authentication Experience
+## 8.5 Attendance Upload, Processing, and Review
 
-### 8.5.1 Welcome and Sign-In Screen
+Attendance upload shall support PDF, one image, and multiple images. The UI shall support normal in-application file selection and PWA share-target input only where supported and successfully validated.
 
-When authentication is required, AttendSense shall provide a clean and focused authentication experience.
+The upload UI shall clearly show selected files and allow the student to remove incorrect selections before processing.
 
-The primary authentication action shall be:
+During processing, the interface shall communicate progress without appearing frozen. Suitable conceptual stages include Uploading, Reading or Extracting, Structuring or Normalizing, Automatic Validation, and Preparing Review.
 
-**Continue with Google**
+The attendance review UI shall primarily show course-aware records. For each relevant record, it shall show where available:
 
-The authentication interface should avoid unnecessary fields or account-creation forms because Phase 1 account identity shall be based on Google authentication.
+- Course code and course name or label.
+- Theory or Practical identity.
+- Conducted, present, and absent values.
+- Independently calculated course percentage.
+- Warning, mapping, validation, or review state.
 
-The screen may include:
+Overall attendance and No Attendance information may appear only as supporting context.
 
-- AttendSense branding.
-- A concise product description.
-- Google authentication action.
-- Appropriate privacy/security messaging.
-- Loading and error feedback.
+The student shall be able to manually correct extracted attendance values before confirmation. The review flow shall offer actions conceptually equivalent to Edit or Correct, Confirm Attendance, and Reject or Upload Again. After a manual correction, automatic validation shall run again, and invalid corrected values shall not be confirmable.
 
-### 8.5.2 Authentication States
-
-The authentication interface shall clearly communicate states such as:
-
-- Ready to sign in.
-- Authentication in progress.
-- Authentication successful.
-- Authentication failed.
-- Session unavailable.
-- Retry available.
-
-Returning users with a valid authenticated session shall not unnecessarily be shown the login interface.
-
-### 8.5.3 Returning User Experience
-
-When a valid session exists:
-
-**Open AttendSense → Restore Account → Dashboard**
-
-When no valid session exists:
-
-**Open AttendSense → Continue with Google → Restore/Create Account → Dashboard or First-Time Setup**
-
-A returning user who authenticates using the same Google identity shall receive the existing AttendSense account and persisted application data.
+The UI shall clearly communicate that confirmation plus successful save makes the new dataset the latest confirmed attendance dataset.
 
 ---
 
-## 8.6 First-Time Academic Setup
+## 8.6 Safe Bunk UI: Today's Remaining Classes
 
-A first-time authenticated student shall be guided through the academic configuration required to associate the correct timetable and academic calendar.
+Safe Bunk shall be presented as a today-only decision tool. It shall show only today's remaining applicable classes.
 
-The setup interface shall:
+A current-day class is selectable only when:
 
-- Use predefined selectable options wherever possible.
-- Minimize manual text entry.
-- Clearly explain each required choice.
-- Show progress where multiple setup steps exist.
-- Prevent continuation when mandatory information is missing.
-- Confirm successful setup.
-- Associate the appropriate timetable and academic calendar after completion.
+**current_time < class_start_time**
 
-The setup shall be short, focused, and student-friendly.
+When current_time is at or after class_start_time, the class shall no longer be selectable for Safe Bunk planning.
 
-Students shall not be required to manually construct their full timetable or academic calendar.
+Displayed sessions shall respect the confirmed timetable, confirmed Academic Calendar, course-code mapping, Theory or Practical separation, confirmed batch applicability, current date or time, and calendar applicability. Teaching and Teaching Continues permit sessions; confirmed holidays and Non-Teaching periods may suppress them. Unknown or ambiguous calendar state shall not silently suppress classes. Batch mismatches are not applicable, and unknown batch or mapping states shall be visibly conservative or reviewable.
+
+For each displayed class, the UI may show course name, course code where available, Theory or Practical identity, start and end time, and batch where relevant. A confirmed continuous practical or laboratory session spanning multiple timetable periods shall be presented as one attendance event.
 
 ---
 
-## 8.7 Student Dashboard
+## 8.7 Safe Bunk Selection and Result
 
-### 8.7.1 Dashboard Purpose
+Safe Bunk shall use explicit bunk selection rather than per-class attendance-state toggles. Displayed classes are future bunk opportunities; the student explicitly selects one or more classes they are considering bunking.
 
-The dashboard shall be the primary starting point after authentication and academic setup.
+Suitable UI patterns include selectable class cards, checkboxes, or a clear Select to Bunk action. Only explicitly selected classes shall affect the projection. Unselected displayed classes shall have no projected attendance effect and shall not be assumed attended.
 
-It shall provide quick access to:
+The Safe Bunk summary and result shall be course-aware. It may show selected classes, affected courses, confirmed and projected course attendance, projected conducted, present, and absent values where useful, and position relative to 75%.
 
-- **Safe Bunk Calculator**
-- **Attendance Recovery Calculator**
-- **Future Attendance Simulator**
-- **Upload Attendance**
-- **Update Attendance**
-- Relevant profile/academic settings.
+Multiple selected classes for one course shall be aggregated for that course. Different affected courses shall be shown independently. A plan is SAFE only when every affected matched course remains at or above 75%, using full precision for decision logic and rounded values only for display.
 
-### 8.7.2 Latest Confirmed Attendance Context
-
-If a latest confirmed attendance dataset exists, the dashboard may display contextual information such as:
-
-- Confirmed overall attendance percentage.
-- Overall Present Slots.
-- Overall Effective Total Slots.
-- Position relative to the 75% threshold.
-- Last attendance update time/date where available.
-
-This contextual display shall **not be presented as a separate Current Attendance Calculator**.
-
-### 8.7.3 No Attendance Dataset State
-
-If no latest confirmed attendance dataset exists, the dashboard shall clearly communicate that attendance information is required before analysis can begin.
-
-The primary action should guide the student toward:
-
-**Upload Attendance**
-
-The three analysis features may remain visible to demonstrate application functionality, but they shall clearly indicate that confirmed attendance information is required before they can be used.
-
-### 8.7.4 Calculator Eligibility States
-
-Safe Bunk and Attendance Recovery may remain visible regardless of current eligibility.
-
-#### When Overall Attendance >= 75%
-
-The dashboard may indicate:
-
-**Safe Bunk Calculator — Available**
-
-**Attendance Recovery — Recovery Not Required**
-
-#### When Overall Attendance < 75%
-
-The dashboard may indicate:
-
-**Safe Bunk Calculator — Currently Unavailable**
-
-**Attendance Recovery — Available**
-
-#### Future Attendance Simulator
-
-Future Attendance Simulator shall remain available at **any confirmed attendance percentage**.
-
-Unavailable states shall explain **why** the feature is not currently applicable rather than merely disabling it without explanation.
+Overall attendance may be shown only as supporting context. The result shall evaluate the student's specific selected bunk plan, rather than simply state a generic number of classes that may be missed.
 
 ---
 
-## 8.8 Attendance Upload Experience
+## 8.8 Attendance Recovery UI
 
-The attendance upload interface shall provide clear input options for:
+Attendance Recovery shall be course-specific and shall apply to an applicable confirmed course record below 75%.
 
-- **Image**
-- **PDF**
+The UI shall clearly identify the course, current confirmed course attendance, conducted, present, absent where useful, the fixed 75% target, and the minimum additional future attended sessions or classes required.
 
-For image input, students shall be able to select:
+Where confirmed timetable and Academic Calendar coverage is sufficient, the UI may show actual upcoming matched sessions contributing to recovery, including date, day, time, course, Theory or Practical identity, running attended-session progress, projected attendance, and earliest recovery date where determinable.
 
-- One supported image.
-- Multiple supported images where required.
-
-For PDF input, the device/browser's supported file picker shall be used.
-
-The interface shall clearly show:
-
-- Selected file(s).
-- File type.
-- Number of images selected where relevant.
-- Ability to remove incorrectly selected files before submission.
-- Primary action to begin processing.
-
-Students shall not be required to specify whether the attendance file originated from a particular website, mobile application, or other attendance interface.
+One confirmed scheduled attendance event counts as one future attendance occurrence for its matched course. A confirmed continuous practical or laboratory session counts as one scheduled attendance event. If coverage ends before a complete recovery path can be generated, the UI shall still show the mathematical required-session count, explain that a complete path or date cannot yet be determined, and not invent future sessions.
 
 ---
 
-## 8.9 PWA Share-Target Experience
+## 8.9 Future Attendance Simulator UI
 
-Where supported and successfully validated, an installed AttendSense PWA may appear in the operating system's share interface for supported attendance images and PDFs.
+Future Attendance Simulator shall remain distinct from Safe Bunk. It may cover a selected future period within available confirmed timetable and Academic Calendar coverage.
 
-The intended user experience shall be:
+Every displayed applicable future class may initially be ATTEND, and the student may switch an applicable class between ATTEND and BUNK/MISS. This default scenario behavior applies only to Future Attendance Simulator.
 
-**Attendance Image/PDF in Another App**  
-↓  
-**Share**  
-↓  
-**Select AttendSense**  
-↓  
-**AttendSense Opens**  
-↓  
-**Authentication Check**  
-↓  
-**Attendance Processing Workflow**
+Applicable sessions shall respect confirmed timetable, Academic Calendar, course-code mapping, Theory or Practical separation, batch applicability, and date or time. Each scheduled attendance event has one occurrence effect for its matched course.
 
-If the user has a valid authenticated session, the received file should proceed directly toward the attendance-processing workflow.
+The simulator result shall be course-aware. It may show the affected course, confirmed course attendance, simulated attended sessions, simulated missed sessions, projected course attendance, change from current course attendance, position relative to 75%, and the selected scenario. If multiple courses are affected, results shall be presented independently by course.
 
-If authentication is required, AttendSense shall guide the student through Google authentication before protected processing continues.
-
-If the shared file cannot safely survive the authentication transition, the interface shall clearly ask the student to provide the file again.
-
-AttendSense shall not display UI language implying that share-sheet availability is guaranteed on every device.
-
-The UX may include guidance such as:
-
-**Install AttendSense for supported share-to-app functionality.**
-
-only where technically appropriate.
+Overall attendance may be shown only as supporting context and shall not be the primary simulator result.
 
 ---
 
-## 8.10 Attendance Processing Experience
+## 8.10 Confirmed, Projected, and Result Presentation
 
-After an attendance file is submitted, AttendSense shall provide visible progress feedback.
+The UI shall clearly distinguish:
 
-The interface may communicate stages such as:
+- Confirmed Attendance: the latest validated, reviewed or edited, confirmed, and saved official attendance dataset.
+- Safe Bunk Projection: a hypothetical result from explicitly selected bunk classes.
+- Recovery Projection: a mathematical scenario assuming required future matched sessions are attended.
+- Future Simulation: a hypothetical ATTEND or BUNK/MISS scenario.
 
-**Uploading**  
-↓  
-**Reading Attendance Data**  
-↓  
-**Extracting Attendance Information**  
-↓  
-**Normalizing Data**  
-↓  
-**Validating Attendance**  
-↓  
-**Preparing Review**
+The interface shall never imply that a projection has updated official attendance.
 
-The student shall not be presented with an apparently frozen interface while processing is occurring.
+Results shall use answer first and supporting details second:
 
-Where practical, processing feedback should communicate meaningful progress rather than displaying an indefinite spinner without context.
+- Safe Bunk primary result: SAFE or UNSAFE.
+- Recovery primary result: minimum additional future attended sessions required for the applicable course.
+- Future Simulator primary result: projected course attendance for affected courses.
+
+Supporting information may show course context, current and projected attendance, the 75% position, scenario details, and overall attendance only where useful.
 
 ---
 
-## 8.11 Attendance Review and Confirmation UI
+## 8.11 Error, Review, and Replacement States
 
-After extraction, normalization, and automatic validation succeed, AttendSense shall present the interpreted attendance dataset for mandatory student review.
+The UI shall clearly communicate when calculation or confirmation cannot safely proceed, including missing confirmed attendance, timetable, or Academic Calendar; unconfirmed replacement input; invalid attendance record; unmatched course code; code-less or ambiguous session; uncertain batch applicability; ambiguous calendar event; failed extraction, validation, or save; unsupported file; and network failure.
 
-The review view shall prominently display relevant information such as:
+The interface shall not silently guess. Where the issue can be resolved through review or editing, it shall provide a clear path to correction.
 
-- **Overall Present Slots**
-- **Overall Effective Total Slots**
-- Displayed/Reported Total Slots, where relevant.
-- No Attendance Slots, where relevant.
-- Independently Calculated Overall Attendance Percentage.
-
-The review screen shall **not primarily present subject-wise attendance percentages as the basis of calculation**.
-
-The interface shall clearly explain:
-
-**Please verify that AttendSense has interpreted your attendance information correctly before continuing.**
-
-Primary actions shall include:
-
-- **Confirm Attendance**
-- **Reject / Upload Again**
-
-Confirmation shall be visually treated as an important action because the confirmed dataset becomes the application's base attendance data.
+The UI shall make it clear that confirmed attendance, timetable, and Academic Calendar data remain available until successfully replaced. While replacement is processed, existing confirmed data remains active. Only successful extraction, validation, review/edit, confirmation, and save replaces confirmed data; a failed or rejected replacement shall not appear to have overwritten it.
 
 ---
 
-## 8.12 Attendance Confirmation Success
+## 8.12 PWA, Responsive Schedule Design, and User Control
 
-After successful student confirmation and successful saving:
+Phase 1 shall be mobile-first and responsive, support optional installation and an app-like installed experience, remain accessible through the browser without installation, and operate online only.
 
-AttendSense shall clearly communicate that the attendance information has been saved successfully.
+The UI shall provide a network-error state. The same Google account shall remain associated across browser and installed PWA use, and reinstalling the PWA shall not create a separate account. PWA share-target input shall be described only as conditional on support and successful validation.
 
-The UI may then provide direct actions such as:
+Responsive schedules shall support grouping by date or day where applicable, clear course identity and code where useful, Theory or Practical identification, batch where relevant, start and end time, Safe Bunk selection state, Future Simulator ATTEND or BUNK/MISS state, Recovery progress, efficient scrolling, and accessible interaction.
 
-- **Safe Bunk Calculator**
-- **Attendance Recovery**
-- **Future Attendance Simulator**
-- **Go to Dashboard**
+The UI shall support reversible actions, including removing an upload before processing, editing extracted attendance, timetable, or calendar data, rejecting data before confirmation, selecting or deselecting a Safe Bunk class, changing or resetting Future Simulator decisions, modifying a Safe Bunk selection, and returning to the dashboard.
 
-Feature availability shall continue to follow the eligibility rules defined elsewhere in this PRD.
-
----
-
-## 8.13 Rejected Extraction Experience
-
-If the student rejects the interpreted attendance data:
-
-- The new dataset shall not be represented as saved.
-- The previous confirmed dataset shall remain available where one exists.
-- The student shall receive a clear path to provide attendance data again.
-
-The interface shall avoid implying that rejection deletes or invalidates the previously confirmed dataset.
-
----
-
-## 8.14 Safe Bunk Calculator UI
-
-### 8.14.1 Safe Bunk Entry State
-
-When the student opens Safe Bunk Calculator, the interface shall first verify eligibility.
-
-If confirmed overall attendance is below 75%, the UI shall explain that Safe Bunk is not currently applicable and may provide an action such as:
-
-**View Attendance Recovery**
-
-If confirmed attendance is at or above 75%, Safe Bunk planning shall proceed.
-
-### 8.14.2 Safe Bunk Schedule Interface
-
-Safe Bunk shall present applicable classes from:
-
-**Current Day → Final Applicable Academic Day of the Current Week**
-
-Classes shall be grouped in an easy-to-scan schedule format, preferably by date/day.
-
-For example:
-
-**Wednesday**
-
-- AI — Lecture
-- ML — Lecture
-- DBMS — Lab
-
-**Thursday**
-
-- CN — Lecture
-- Web Development — Lab
-
-Each class shall clearly indicate whether it is:
-
-- Lecture.
-- Laboratory session.
-
-The UI may also communicate the relevant slot impact:
-
-- Lecture → 1 slot.
-- Lab → 2 slots.
-
-### 8.14.3 Default Safe Bunk State
-
-Every displayed class shall initially be:
-
-**ATTEND**
-
-The student shall be able to change a class to:
-
-**BUNK**
-
-The interaction should be fast and visually obvious.
-
-Suitable UI patterns may include:
-
-- Segmented ATTEND/BUNK controls.
-- Toggle-style selection.
-- Interactive schedule cards.
-- Other clearly understandable state controls.
-
-The exact visual component may be determined during UI implementation.
-
-### 8.14.4 Safe Bunk Live Summary
-
-The interface should provide a clear summary of the current plan.
-
-Relevant information may include:
-
-- Current confirmed attendance.
-- Selected attended slots.
-- Selected bunked slots.
-- Projected overall attendance.
-- Position relative to 75%.
-
-Where performance permits, projected results should update interactively as the student changes ATTEND/BUNK selections.
-
-### 8.14.5 Safe Bunk Result
-
-The result shall primarily answer:
-
-**Is this selected bunk plan safe?**
-
-Example safe result:
-
-**SAFE**
-
-**Your selected plan keeps your projected overall attendance at or above 75%.**
-
-Example unsafe result:
-
-**UNSAFE**
-
-**This plan would reduce your projected overall attendance below 75%.**
-
-Supporting information may include:
-
-- Current confirmed attendance.
-- Projected attendance.
-- Selected bunked classes.
-- Selected attended classes.
-- Total attended/bunked slot impact.
-- Relevant dates.
-
-The result shall clearly explain that classes left as **ATTEND** are assumed to be attended.
-
-AttendSense shall not use the old generic result pattern:
-
-**"You can miss X classes."**
-
-as the primary Safe Bunk model.
-
-Safe Bunk evaluates the student's **specific selected plan**.
-
----
-
-## 8.15 Attendance Recovery Calculator UI
-
-### 8.15.1 Recovery Entry State
-
-Attendance Recovery shall be applicable when confirmed overall attendance is below 75%.
-
-If the student's attendance is already at or above 75%, the interface shall clearly state:
-
-**Attendance recovery is not currently required.**
-
-The UI may provide a direct action toward Safe Bunk instead.
-
-### 8.15.2 Recovery Requirement Presentation
-
-The primary recovery result shall prominently communicate:
-
-**Required Recovery Attendance Slots**
-
-For example:
-
-**You need to attend 30 additional attendance slots to mathematically reach 75%.**
-
-The UI shall use the term **attendance slots** rather than incorrectly presenting the value as a fixed number of individual classes.
-
-### 8.15.3 Recovery Schedule View
-
-Where sufficient timetable and calendar data exists, AttendSense shall map recovery slots to actual future classes.
-
-The recovery schedule should present information chronologically and may show:
-
-- Date.
-- Day.
-- Class name.
-- Lecture/Lab classification.
-- Slot contribution.
-- Running recovery progress.
-
-For example:
-
-**12 / 30 Recovery Slots Completed in Plan**
-
-Laboratory sessions shall visibly contribute **2 slots**.
-
-Lectures shall visibly contribute **1 slot**.
-
-### 8.15.4 Recovery Result
-
-The recovery result may include:
-
-- Current confirmed attendance.
-- Required 75% threshold.
-- Required recovery slots.
-- Upcoming classes contributing to recovery.
-- Projected attendance at the recovery point.
-- Earliest projected recovery date, where determinable.
-
-The UI shall clearly communicate:
-
-**This recovery projection assumes that the listed future attendance opportunities are successfully attended.**
-
-If the complete recovery date cannot be determined because sufficient future timetable/calendar information is unavailable, the UI shall show the mathematical recovery-slot requirement while explaining that the complete date cannot currently be projected.
-
----
-
-## 8.16 Future Attendance Simulator UI
-
-### 8.16.1 Simulator Availability
-
-Future Attendance Simulator shall remain available whenever a latest confirmed attendance dataset exists.
-
-The interface shall not restrict usage based on whether attendance is:
-
-- Above 75%.
-- Exactly 75%.
-- Below 75%.
-
-### 8.16.2 Future Period Selection
-
-The simulator shall allow the student to choose an applicable future period within the available timetable/calendar range.
-
-Possible interaction patterns may include:
-
-- This Week.
-- Next Week.
-- Custom future date/range.
-
-The final interaction pattern may be refined during UI implementation.
-
-Unlike Safe Bunk, the simulator shall not be limited only to the remainder of the current week.
-
-### 8.16.3 Simulation Schedule
-
-Applicable future lectures and labs shall be shown in a schedule-oriented interface.
-
-Every class shall initially be:
-
-**ATTEND**
-
-The student shall be able to change any applicable class between:
-
-- **ATTEND**
-- **BUNK/MISS**
-
-The interface shall visually distinguish lectures from laboratories and may show their slot weights.
-
-### 8.16.4 Interactive Simulation Result
-
-Where technically practical, the Future Attendance Simulator shall update the projected attendance dynamically as the student modifies the scenario.
-
-A persistent or easily accessible simulation summary may show:
-
-- Current confirmed attendance.
-- Future attended slots.
-- Future missed slots.
-- Predicted overall attendance.
-- Difference from current attendance.
-- Position relative to 75%.
-
-This shall allow the student to experiment with multiple hypothetical scenarios without repeatedly navigating between separate input and result screens.
-
-### 8.16.5 Hypothetical Result Labeling
-
-Future Simulator results shall be clearly identified as:
-
-**Hypothetical / Predicted**
-
-and shall not visually resemble newly saved official attendance.
-
-The UI shall communicate that:
-
-**Simulation results do not modify your confirmed attendance data.**
-
----
-
-## 8.17 Confirmed vs Projected Data Visualization
-
-AttendSense shall clearly distinguish among:
-
-### Confirmed Attendance
-
-Attendance derived from the latest confirmed attendance dataset.
-
-### Safe Bunk Projection
-
-Projected attendance after the student's selected Safe Bunk plan.
-
-### Recovery Projection
-
-Projected attendance resulting from successfully attending the calculated recovery path.
-
-### Future Simulation
-
-Hypothetical attendance resulting from the selected future scenario.
-
-The interface shall not use ambiguous labels that could cause a projected value to be mistaken for updated official attendance.
-
----
-
-## 8.18 Attendance Status Visualization
-
-AttendSense shall visually distinguish important attendance states such as:
-
-- Above the required threshold.
-- Exactly at the required threshold.
-- Near the required threshold.
-- Below the required threshold.
-- Safe Bunk plan safe.
-- Safe Bunk plan unsafe.
-- Recovery required.
-- Recovery target reached in projection.
-- Hypothetical simulation above/below 75%.
-
-Status communication shall not rely exclusively on color.
-
-The UI shall also use appropriate:
-
-- Text labels.
-- Icons.
-- Status badges.
-- Supporting descriptions.
-
----
-
-## 8.19 Latest Attendance Dataset Visibility
-
-Where useful, AttendSense should make it easy for the student to understand which attendance information is currently being used for calculations.
-
-The interface may display:
-
-- Last attendance update date/time.
-- Current Present Slots.
-- Current Effective Total Slots.
-- Current confirmed attendance percentage.
-
-The application should provide an obvious:
-
-**Update Attendance**
-
-action.
-
-Using a calculator shall not visually imply that the latest confirmed attendance dataset has changed.
-
----
-
-## 8.20 Loading States
-
-AttendSense shall provide meaningful loading/progress indicators for operations that are not instantaneous.
-
-Examples include:
-
-- Google authentication.
-- File upload.
-- File reception through a supported share target.
-- Attendance extraction.
-- Attendance normalization.
-- Attendance validation.
-- Attendance saving.
-- Timetable/calendar processing.
-- Schedule generation.
-- Attendance calculation.
-
-Controls that could create duplicate requests shall be appropriately disabled or guarded while the operation is in progress.
-
----
-
-## 8.21 Empty States
-
-AttendSense shall provide informative empty states rather than blank interfaces.
-
-Examples include:
-
-### No Confirmed Attendance
-
-**Upload attendance to start using AttendSense analysis tools.**
-
-### No Applicable Safe Bunk Classes
-
-The interface shall explain that no applicable classes remain in the current week's supported schedule.
-
-### No Future Classes in Selected Simulation Range
-
-The interface shall guide the student to select another valid period.
-
-### Recovery Schedule Cannot Be Fully Determined
-
-The interface shall still show the mathematical recovery requirement where available and explain the schedule limitation.
-
----
-
-## 8.22 Success States
-
-Successful operations shall provide clear confirmation without unnecessarily interrupting the workflow.
-
-Examples include:
-
-- Signed in successfully.
-- Academic setup completed.
-- Attendance file received.
-- Attendance processed successfully.
-- Attendance confirmed and saved.
-- Attendance updated successfully.
-- Safe Bunk analysis completed.
-- Recovery calculation completed.
-- Future simulation updated.
-
-Success feedback should be concise and contextual.
-
----
-
-## 8.23 Error States
-
-Error messages shall:
-
-- Clearly identify the problem.
-- Use understandable student-facing language.
-- Avoid unnecessary technical implementation details.
-- Explain what the student can do next.
-- Preserve previously confirmed data where appropriate.
-
-Examples include:
-
-- Unsupported file.
-- File too large.
-- Corrupted file.
-- Attendance could not be extracted reliably.
-- Attendance validation failed.
-- Missing or incomplete attendance information.
-- Attendance could not be saved.
-- Missing academic configuration.
-- Timetable information unavailable.
-- Academic calendar information unavailable.
-- Authentication failed.
-- Network unavailable.
-- Share-target input could not be restored after authentication.
-- Calculation could not be completed.
-
-Where recovery is possible, the interface shall provide an obvious retry or corrective action.
-
----
-
-## 8.24 Navigation
-
-AttendSense navigation shall remain simple and consistent.
-
-The primary navigation structure may include areas such as:
-
-- **Home**
-- **Attendance**
-- **Analysis**
-- **Profile / Settings**
-
-Within Analysis, students shall be able to access:
-
-- Safe Bunk.
-- Attendance Recovery.
-- Future Simulator.
-
-The exact navigation pattern may vary by screen size.
-
-For example:
-
-- Mobile may use bottom navigation, compact navigation, or another mobile-appropriate pattern.
-- Larger screens may use a sidebar or expanded navigation.
-
-The underlying information architecture shall remain consistent.
-
----
-
-## 8.25 Interaction Design
-
-Interactive controls shall:
-
-- Provide immediate visible feedback.
-- Clearly indicate selected states.
-- Clearly distinguish enabled and disabled states.
-- Have sufficiently large touch targets.
-- Use understandable labels.
-- Prevent accidental duplicate submissions.
-- Minimize unnecessary interaction steps.
-- Remain usable on touch and pointer-based devices.
-
-ATTEND/BUNK controls shall be particularly clear because they directly affect projected attendance results.
-
-Animations and transitions may be used to:
-
-- Reinforce state changes.
-- Improve orientation.
-- Make calculations feel responsive.
-- Improve visual polish.
-
-Animations shall not interfere with usability or performance.
-
----
-
-## 8.26 Accessibility
-
-AttendSense shall follow appropriate web accessibility principles.
-
-The interface shall provide:
-
-- Readable text sizes.
-- Adequate contrast.
-- Clearly labeled controls.
-- Semantic form labels.
-- Keyboard-accessible essential functionality where appropriate.
-- Visible focus states.
-- Alternatives to color-only status communication.
-- Understandable error messages.
-- Appropriate accessible names for interactive icons.
-- Responsive text/layout behavior.
-
-Interactive attendance controls shall remain understandable without relying solely on visual styling.
-
----
-
-## 8.27 PWA Experience
-
-AttendSense Phase 1 shall be implemented as a Progressive Web Application.
-
-On supported platforms and browsers, the student shall be able to install AttendSense.
-
-When installed, the PWA should provide an app-like experience including:
-
-- Application icon.
-- Application name.
-- Standalone launch experience.
-- Mobile-first responsive interface.
-- Appropriate install metadata.
-- Supported share-target functionality where technically available.
-
-Installation shall remain optional.
-
-The core AttendSense application shall remain usable through a supported browser without installation.
-
----
-
-## 8.28 PWA Installation Experience
-
-Where browser/platform support allows, AttendSense may provide a clear but non-intrusive installation option.
-
-The UI shall not block normal browser usage merely because the student has not installed the PWA.
-
-Installation messaging may explain relevant benefits such as:
-
-- App-like launch experience.
-- Home-screen/application-list access.
-- Supported share-to-AttendSense functionality where available.
-
-The UI shall not guarantee functionality that depends on unsupported platform/browser capabilities.
-
----
-
-## 8.29 PWA Share-Target Limitation Communication
-
-AttendSense shall not communicate that installing the PWA guarantees appearance in every operating system share sheet.
-
-Share-target availability depends on supported:
-
-- Operating systems.
-- Browsers.
-- PWA installation behavior.
-- Share-target registration.
-- File-type handling.
-
-If technical evaluation determines supported configurations, the UI/documentation may provide platform-specific guidance.
-
----
-
-## 8.30 PWA Authentication Behavior
-
-PWA installation shall not create a separate account.
-
-When a valid authentication session exists:
-
-**Open Installed PWA → Dashboard**
-
-When the session is unavailable:
-
-**Open Installed PWA → Google Authentication → Existing Account Restored**
-
-Reinstalling the PWA shall not itself create a new AttendSense account.
-
-Authentication with the same Google identity shall restore the account's persisted data where available.
-
----
-
-## 8.31 Online-Only Experience
-
-AttendSense Phase 1 shall require network connectivity for normal operation.
-
-Offline functionality shall not be presented as a Phase 1 capability.
-
-When the required network connection is unavailable, the application shall display a clear connectivity state.
-
-The UI shall avoid presenting calculations or data-processing actions as successfully completed when required backend communication did not occur.
-
-Where possible, the application shall provide an obvious retry action after connectivity is restored.
-
----
-
-## 8.32 Responsive Schedule Design
-
-Safe Bunk, Recovery, and Future Simulator may involve multiple future classes across multiple dates.
-
-The schedule interface shall remain usable even when many classes are displayed.
-
-The design should support:
-
-- Grouping by date/day.
-- Clear lecture/lab identification.
-- Scannable class information.
-- Easy ATTEND/BUNK interaction where applicable.
-- Clear slot contribution.
-- Efficient scrolling.
-- Persistent or easily accessible calculation summary where useful.
-
-On larger screens, the interface may use additional space to improve schedule visibility while preserving mobile-first interaction principles.
-
----
-
-## 8.33 Result Presentation Principle
-
-Attendance results shall prioritize the **answer first**, followed by supporting details.
-
-### Safe Bunk
-
-Primary result:
-
-**SAFE / UNSAFE**
-
-Supporting data:
-
-- Projected attendance.
-- Selected plan.
-- Slot impact.
-- Current confirmed attendance.
-
-### Attendance Recovery
-
-Primary result:
-
-**Required Recovery Slots**
-
-Supporting data:
-
-- Projected recovery date.
-- Recovery schedule.
-- Current attendance.
-- Target attendance.
-
-### Future Attendance Simulator
-
-Primary result:
-
-**Predicted Overall Attendance**
-
-Supporting data:
-
-- Current attendance.
-- Attended slots.
-- Missed slots.
-- Change in attendance.
-- Position relative to 75%.
-
-Students shall not be required to interpret raw formulas to understand these results.
-
----
-
-## 8.34 UI Consistency
-
-AttendSense shall maintain a consistent design system across all application areas.
-
-Reusable patterns should be used for:
-
-- Buttons.
-- Cards.
-- Forms.
-- Inputs.
-- File selection.
-- Dialogs.
-- Bottom sheets where applicable.
-- Schedule cards.
-- ATTEND/BUNK controls.
-- Status indicators.
-- Progress indicators.
-- Notifications.
-- Navigation.
-- Loading states.
-- Error states.
-- Result cards.
-
-Typography, spacing, iconography, component behavior, and interaction patterns shall remain consistent throughout the application.
-
----
-
-## 8.35 User Control and Reversibility
-
-Where appropriate, the student shall be able to safely reverse non-destructive interface actions.
-
-Examples include:
-
-- Remove a selected upload before processing.
-- Reject extracted attendance before confirmation.
-- Change an ATTEND selection to BUNK.
-- Change a BUNK selection back to ATTEND.
-- Reset a Future Attendance Simulation.
-- Modify a Safe Bunk plan.
-- Return from an analysis to the dashboard.
-
-Hypothetical attendance selections shall remain reversible because they do not modify confirmed attendance data.
-
----
-
-## 8.36 Avoiding Misleading Attendance Information
-
-The interface shall not visually imply that:
-
-- A Safe Bunk projection has updated official attendance.
-- A Recovery projection represents attendance already earned.
-- A Future Simulation represents official attendance.
-- Passage of time automatically updates confirmed attendance.
-- Classes marked ATTEND have actually been attended.
-- Classes marked BUNK have actually been missed.
-
-Projected results shall use appropriate language such as:
-
-- **Projected**
-- **Predicted**
-- **Hypothetical**
-- **Assuming you attend...**
-
-where necessary.
-
----
-
-## 8.37 UI/UX Success Principle
-
-A student should be able to understand the primary AttendSense workflow without requiring technical instructions.
-
-The core experience shall be:
-
-**Open AttendSense**  
-↓  
-**Authenticate if Required**  
-↓  
-**Complete Academic Setup if Required**  
-↓  
-**Use Existing Confirmed Attendance or Upload/Update Attendance**  
-↓  
-**Processing and Validation**  
-↓  
-**Review and Confirm Attendance**  
-↓  
-**Select Analysis Feature**  
-↓  
-**Interact with Feature-Specific Planning Interface**  
-↓  
-**Receive Clear Result**
-
-The design shall make the distinction between the three analysis questions immediately understandable:
-
-### Safe Bunk
-
-**"Can I safely follow this bunk plan and remain at or above 75%?"**
-
-### Attendance Recovery
-
-**"What do I need to attend to recover to 75%?"**
-
-### Future Attendance Simulator
-
-**"What happens to my attendance if this future scenario occurs?"**
-
-AttendSense shall aim to make these workflows feel like a cohesive, polished student product rather than three unrelated calculators.
+Exact colors, fonts, component libraries, icon libraries, animation frameworks, CSS systems, and frontend technologies shall remain implementation decisions.
 
 # 9. Non-Functional Requirements
 
-This section defines the quality, performance, reliability, data-integrity, usability, compatibility, maintainability, scalability, accessibility, and testability requirements for AttendSense Phase 1.
+## 9.1 Scope and Quality Principles
 
-Non-functional requirements shall apply across the complete AttendSense workflow, including:
+AttendSense Phase 1 shall provide reliable, secure, maintainable, accessible, mobile-first, online-only attendance analysis without adding unapproved product features.
 
-**Authentication → Academic Configuration → Attendance Input → Processing → Validation → Confirmation → Persistence → Attendance Analysis**
-
-The system shall prioritize correctness and reliability where these qualities conflict with speed or visual presentation.
+All quality requirements in this section shall support the approved course-aware architecture: confirmed attendance may originate from PDF, one image, or multiple images; a student-uploaded timetable uses image or screenshot input only; and a student-uploaded official SPCE Academic Calendar uses PDF input only.
 
 ---
 
-## 9.1 Performance
+## 9.2 Performance
 
-### NFR-001 — Application Responsiveness
+The interface shall provide responsive feedback for confirmed course attendance display, Safe Bunk selection or deselection, Attendance Recovery, Future Attendance Simulator scenarios, 75% threshold evaluation, and course or session matching where applicable.
 
-AttendSense shall provide a responsive user experience during normal application usage.
+Safe Bunk interactions shall recalculate only the affected course records for explicitly selected bunk classes. Future Simulator interactions may recalculate the affected course records after ATTEND or BUNK/MISS scenario changes.
 
-Routine interactions such as:
-
-- Navigation.
-- Opening analysis interfaces.
-- Changing ATTEND/BUNK selections.
-- Selecting future simulation periods.
-- Viewing previously persisted information.
-- Opening profile or academic settings.
-- Updating calculator selections.
-
-should respond without unnecessary perceptible delay.
-
-Operations that require backend processing shall provide appropriate feedback rather than making the application appear unresponsive.
+Document workflows for attendance PDF, attendance images, multiple images, timetable images or screenshots, and Academic Calendar PDFs shall provide visible progress without artificial fixed-time guarantees. Extraction reliability shall take priority over an artificially low processing time.
 
 ---
 
-### NFR-002 — Attendance Calculation Performance
+## 9.3 Deterministic Reliability
 
-Deterministic attendance calculations shall be performed efficiently.
+For identical confirmed structured inputs, confirmed timetable and Academic Calendar data, mappings, applicable date or time, and analysis selections, AttendSense shall produce identical mathematical results.
 
-Once all required validated inputs are available, calculations for:
+Calculation-critical outcomes shall use full available precision internally and apply display rounding only after calculation. Generative AI or LLM output shall not determine course attendance percentages, projected course attendance, Safe Bunk safety, Recovery requirements, Future Simulator results, or threshold compliance.
 
-- Confirmed overall attendance determination.
-- Safe Bunk analysis.
-- Attendance Recovery.
-- Future Attendance Simulation.
-- 75% threshold evaluation.
-
-should complete without unnecessary processing delay.
-
-Interactive Safe Bunk and Future Attendance Simulator calculations should update promptly after ATTEND/BUNK selections where technically practical.
-
-Calculation speed shall not take priority over calculation correctness.
+Document-processing technology may assist extraction, but extraction is fallible. Mandatory review/edit, confirmation, and successful save shall remain required even when extraction confidence is high.
 
 ---
 
-### NFR-003 — Attendance File Processing Feedback
+## 9.4 Conservative Failure and Recovery
 
-Attendance extraction from PDFs or images may require more time than deterministic attendance calculations.
+AttendSense shall fail conservatively when required information is missing, invalid, contradictory, ambiguous, unmatched, unconfirmed, or unreliable.
 
-Whenever processing is not effectively instantaneous, AttendSense shall provide visible progress or processing feedback.
+The system shall not silently guess attendance values, course mappings, batch applicability, calendar meaning, or future sessions, and shall not replace confirmed data with incomplete replacement data.
 
-Where appropriate, feedback may communicate stages such as:
-
-- Uploading.
-- Reading input.
-- Extracting attendance information.
-- Normalizing attendance data.
-- Validating attendance.
-- Preparing student review.
-
-The application shall not appear frozen while attendance processing is occurring.
+Where correction is possible, the student shall receive a clear review/edit, retry, or replacement path.
 
 ---
 
-### NFR-004 — Reasonable Processing Performance
+## 9.5 Confirmed-Data Integrity and Replacement
 
-Attendance file processing shall be designed to avoid unnecessary processing latency.
+AttendSense shall protect three independently confirmed persisted inputs:
 
-Performance shall be evaluated using representative Phase 1:
+1. The latest confirmed course-aware attendance dataset.
+2. The confirmed student-uploaded timetable.
+3. The confirmed student-uploaded Academic Calendar.
 
-- PDF attendance files.
-- Single-image attendance submissions.
-- Multi-image attendance submissions.
+Each shall remain active until its own replacement successfully completes the applicable Input, Extraction or Structuring, Validation, Review/Edit, Confirmation, and Save or Persistence stages.
 
-No fixed processing-time guarantee shall be defined until the selected PDF/OCR/vision technology has been technically evaluated.
-
-Extraction reliability shall take priority over achieving an artificially low processing time.
+A failed extraction, validation, save, or rejected replacement shall preserve the corresponding previous confirmed data. This protection shall apply independently to attendance, timetable, and Academic Calendar data.
 
 ---
 
-## 9.2 Reliability
+## 9.6 Course-Aware Record Integrity
 
-### NFR-005 — Deterministic Calculation Reliability
+Calculation-critical course information shall preserve course code, course identity, Theory or Practical distinction, conducted, present, absent, calculation eligibility, and review or mapping state where applicable.
 
-Identical validated calculation inputs shall produce identical attendance-analysis results.
+Where valid structured course codes exist, they shall be the authoritative primary identity. Minor OCR name differences shall not override a valid course-code identity. Theory and Practical records with separate official codes shall not be merged.
 
-The calculation engine shall follow the mathematical rules defined in Section 6.
+Code-less or ambiguous records shall not silently become calculation-eligible. Course, batch, and calendar ambiguity shall remain reviewable or conservatively excluded from calculation-critical outcomes.
 
-Attendance calculations shall remain deterministic and reproducible.
-
-Generative AI or probabilistic language-model output shall not determine:
-
-- Attendance percentages.
-- Safe Bunk safety.
-- Recovery requirements.
-- Future attendance predictions.
-- 75% threshold compliance.
+Overall attendance may be retained only as supporting context or cross-validation and shall not be the primary calculation basis.
 
 ---
 
-### NFR-006 — Attendance Extraction Reliability
+## 9.7 Session and Schedule Integrity
 
-Attendance extraction shall be treated as potentially fallible.
+One confirmed scheduled attendance event shall equal one future attendance occurrence for its matched course.
 
-Extracted attendance information shall not automatically become trusted calculation data.
+If a practical or laboratory session spans multiple timetable periods but the confirmed timetable identifies it as one continuous session, it shall count as one scheduled attendance event. AttendSense shall not apply universal lecture, laboratory, or duration-based attendance weighting.
 
-All newly submitted attendance information shall remain subject to the required:
+Timetable integrity shall preserve, where relevant, day or date applicability, start and end time, course or session identity, course code, Theory or Practical identity, batch applicability, and continuous multi-period session structure.
 
-**Extraction → Normalization → Automatic Validation → Student Review → Student Confirmation → Successful Save**
-
-workflow.
-
-High extraction accuracy shall not eliminate mandatory student confirmation.
+Academic Calendar integrity shall preserve Teaching, Teaching Continues, Non-Teaching, Unknown or Requires Review, and relevant scope or applicability metadata. Unknown or ambiguous calendar states shall not silently suppress timetable sessions.
 
 ---
 
-### NFR-007 — Safe Failure Behaviour
+## 9.8 Safe Bunk Quality Requirements
 
-If AttendSense cannot reliably determine the information required for a new attendance dataset, the system shall fail safely.
+Safe Bunk shall be today-only. It shall consider only today's remaining applicable classes, and a class shall be selectable only when:
 
-It shall not:
+**current_time < class_start_time**
 
-- Guess missing attendance values.
-- Invent unreadable values.
-- Silently resolve material contradictions without a reliable basis.
-- Generate attendance-analysis results from uncertain new attendance data.
-- Replace a previously confirmed dataset with invalid or incomplete information.
+When current_time is at or after class_start_time, the class shall not be selectable.
 
-The student shall instead receive an appropriate corrective action.
+Only explicitly selected bunk classes shall affect the projection. Unselected displayed classes shall have no projected attendance effect. Multiple selected classes for one course shall aggregate for that course, while different affected courses shall be calculated independently.
+
+A Safe Bunk plan shall be SAFE only when every affected matched course remains at or above 75%. Overall attendance may be displayed only as supporting context.
 
 ---
 
-### NFR-008 — Failure Isolation
+## 9.9 Attendance Recovery Quality Requirements
 
-Failure of one operation should not unnecessarily make the complete application unusable.
+Attendance Recovery shall be course-specific and shall reliably calculate the minimum additional future attended sessions required for the applicable course to reach at least 75%.
 
-For example:
+For each projected attended matched session, conducted and present shall increase by one while absent remains unchanged.
 
-- Attendance extraction failure should allow another upload.
-- Authentication failure should allow retry.
-- Invalid attendance input should allow correction or re-upload.
-- Calculation failure should allow recalculation.
-- Share-target failure should not prevent normal in-application upload.
-- Failure of a new attendance submission should not invalidate the previous confirmed dataset.
-
-Where practical, the student shall be able to recover without restarting the complete application workflow.
+A recovery schedule or date may be produced only where confirmed timetable and Academic Calendar coverage supports it. If coverage ends first, AttendSense shall still return the mathematical required attended-session count, explain that a complete path or date cannot currently be determined, and not invent future sessions.
 
 ---
 
-## 9.3 Data Integrity
+## 9.10 Future Simulator and Hypothetical-Data Isolation
 
-### NFR-009 — Attendance Dataset Integrity
+Future Attendance Simulator may use ATTEND and BUNK/MISS scenario selections.
 
-Attendance data shall remain consistent while moving through:
+For a matched simulated ATTEND, conducted and present increase by one while absent is unchanged. For a matched BUNK/MISS, conducted and absent increase by one while present is unchanged.
 
-**Extraction → Normalization → Automatic Validation → Student Review → Student Confirmation → Persistence → Calculation**
+Simulation shall operate independently for each affected course and preserve Theory or Practical separation. Overall attendance may be supporting context only. Simulator output shall remain hypothetical and shall never modify confirmed attendance.
 
-Raw extracted information shall not be treated as equivalent to confirmed attendance data.
-
-Only successfully confirmed and saved normalized attendance data shall become the latest confirmed attendance dataset.
+Confirmed attendance, confirmed timetable and Academic Calendar data, Safe Bunk selections, Recovery projections, Future Simulator scenarios, and projected attendance shall remain isolated. Passage of time shall not convert a planned or simulated action into official attendance. Opening another calculator shall begin from the latest confirmed attendance dataset, not the result of another calculator.
 
 ---
 
-### NFR-010 — Confirmed Dataset Protection
+## 9.11 Usability and Responsive Design
 
-The student's latest confirmed attendance dataset shall remain unchanged until a newer dataset successfully completes all required replacement stages.
+The interface shall use student-friendly language, minimal unnecessary navigation and repeated data entry, clear interaction feedback, and answer-first result presentation.
 
-A newer submission shall not replace the existing dataset merely because it has been:
+Students shall be able to distinguish confirmed course attendance, supporting overall attendance where shown, Safe Bunk SAFE or UNSAFE results, projected affected-course attendance, course-specific Recovery requirements and projections, and hypothetical Future Simulator results.
 
-- Uploaded.
-- Extracted.
-- Normalized.
-- Automatically validated.
-- Displayed for review.
+The interface shall distinguish Safe Bunk explicit select or deselect bunk actions from Future Simulator ATTEND or BUNK/MISS state changes.
 
-Replacement shall occur only after required student confirmation and successful persistence.
+Mobile-first responsive schedules shall remain usable with course identity, Theory or Practical distinction, batch information, time, Safe Bunk selection state, Future Simulator state, and Recovery progress. Safe Bunk shall remain today-only; Recovery and Future Simulator may span multiple dates only within confirmed coverage.
 
 ---
 
-### NFR-011 — Failed Update Preservation
+## 9.12 PWA, Compatibility, and Accessibility
 
-If a newer attendance submission:
+The PWA shall be installable where supported, optional to install, available in the browser without installation, and provide an app-like installed experience. Phase 1 shall operate online only.
 
-- Fails upload.
-- Fails extraction.
-- Fails normalization.
-- Fails validation.
-- Is rejected by the student.
-- Fails persistence.
+The same Google account shall remain associated across browser and installed PWA use, and reinstalling the PWA shall not create a separate account. PWA share-target support shall be conditional on platform support and successful validation, apply only to supported attendance files, and never prevent standard in-app attendance upload if it fails.
 
-the previously confirmed attendance dataset shall remain active and unchanged.
+File compatibility shall distinguish:
 
----
+- Attendance: PDF, supported image, or multiple supported images.
+- Timetable: image or screenshot only.
+- Academic Calendar: PDF only.
 
-### NFR-012 — Hypothetical Data Isolation
+Unsupported or unreadable input shall fail gracefully.
 
-Safe Bunk, Attendance Recovery, and Future Attendance Simulator outputs shall not modify confirmed attendance data.
-
-The system shall maintain a clear logical separation between:
-
-- Confirmed attendance data.
-- Temporary analysis inputs.
-- Calculated requirements.
-- Projected attendance.
-- Hypothetical simulation results.
-
-Passage of time shall not automatically convert a planned future ATTEND/BUNK decision into confirmed attendance.
+Important states shall not rely on color alone. Accessible states include SAFE, UNSAFE, at threshold, below threshold, Recovery Required, Projected, Hypothetical, Requires Review, Validation Error, and Confirmed.
 
 ---
 
-### NFR-013 — Calculation Precision
+## 9.13 Online Operation and Error Recovery
 
-AttendSense shall maintain sufficient internal numerical precision to ensure that display rounding does not incorrectly affect threshold decisions.
+Network failures shall not produce false success. Retry and recovery behavior shall cover Google authentication; attendance, timetable, and Academic Calendar upload, extraction, and save; recalculation; and schedule loading where applicable.
 
-Threshold comparisons shall use the calculation rules defined in Section 6.
-
-Displayed percentages may be rounded for readability, but rounded display values shall not replace the underlying calculation values used for eligibility or safety decisions.
+Retry shall not duplicate, overwrite, or corrupt confirmed data.
 
 ---
 
-### NFR-014 — Timetable and Calendar Integrity
+## 9.14 Maintainability and Extensibility
 
-Schedule-aware attendance analysis shall use the timetable and academic calendar associated with the student's current academic configuration.
+The system shall preserve modular separation among authentication, academic configuration, attendance input and extraction, timetable input and extraction, Academic Calendar input and extraction, validation and review, persistence, deterministic calculation, course or session mapping, calendar or batch filtering, PWA functionality, and UI.
 
-AttendSense shall not silently substitute unrelated:
+Reusable UI and application components may include course-aware record displays, review/edit interfaces, schedule or session cards, Safe Bunk selection controls, Future Simulator scenario controls, status indicators, result presentation, and loading or error states.
 
-- Timetables.
-- Academic calendars.
-- Class occurrences.
-- Academic configurations.
-
-when the required scheduling information is unavailable.
+Student-uploaded timetable and Academic Calendar extraction technologies shall be replaceable without redesigning the deterministic calculation engine. The engine shall remain independent from document acquisition and extraction method. The architecture shall not hard-code one timetable, department, semester, batch, or calendar layout, and shall not expand Phase 1 into multi-college support.
 
 ---
 
-### NFR-015 — Attendance Slot Integrity
+## 9.15 Testability
 
-Attendance-slot weighting shall be applied consistently throughout the application.
+Calculation tests shall cover course attendance above, exactly at, and below 75%; Safe Bunk safe and unsafe boundaries; multiple selected skips for one course; selected skips across courses; an unselected Safe Bunk class with no effect; the strict current_time before class_start_time boundary; Theory or Practical separation; conducted equal to zero; precision boundaries; missing, unmatched, or code-less courses; batch match, mismatch, and unknown state; Teaching Continues; holiday, Non-Teaching, and ambiguous calendar states; continuous multi-period sessions; Recovery required-session calculations and incomplete coverage; Future Simulator ATTEND, BUNK/MISS, and mixed scenarios; and isolation of confirmed data from calculator results.
 
-Phase 1 shall use:
+Attendance validation tests shall cover valid course-aware records, present plus absent equals conducted, mismatches, negative values, conducted equal to zero, percentage validation, structured course-code identity, Theory or Practical separation, duplicate or overlapping multiple-image records, conflicts, and code-less or ambiguous records.
 
-- **Lecture = 1 attendance slot**
-- **Laboratory session = 2 attendance slots**
+Timetable tests shall cover image or screenshot extraction, event completeness, day or time, course code, Theory or Practical identity, batch, continuous multi-period sessions, unknown mapping or review state, and replacement preservation.
 
-The same weighting rules shall apply consistently to:
+Academic Calendar tests shall cover PDF extraction, Teaching, Teaching Continues, Non-Teaching, Unknown or Requires Review, scope or applicability, holiday suppression, and replacement preservation.
 
-- Safe Bunk.
-- Attendance Recovery.
-- Future Attendance Simulator.
+Replacement tests shall cover attendance, timetable, and Academic Calendar failures during extraction, validation, rejection, and save, plus successful replacement only after confirmation and save.
 
 ---
 
-## 9.4 Usability
+## 9.16 Observability, Security, and Privacy
 
-### NFR-016 — Ease of Use
+Diagnostics shall help developers investigate authentication, document-processing, validation, save, calculation, timetable or calendar mapping, share-target, and unexpected application failures.
 
-AttendSense shall be usable by students without requiring technical knowledge or understanding of attendance formulas.
-
-The application shall minimize:
-
-- Manual attendance calculations.
-- Unnecessary text entry.
-- Unnecessary navigation.
-- Repeated data entry.
-- Technical terminology.
+Observability shall not expose sensitive implementation details to students or log secrets or sensitive authentication credentials.
 
 ---
 
-### NFR-017 — Clear Communication
+## 9.17 Phase 1 Boundaries
 
-User-facing messages shall use clear and student-understandable language.
-
-Internal implementation details, exceptions, stack traces, or unnecessary system terminology shall not be exposed through normal user-facing interfaces.
-
-Messages shall clearly explain:
-
-1. What happened.
-2. What the student needs to know.
-3. What action can be taken next where applicable.
-
----
-
-### NFR-018 — Result Understandability
-
-Attendance-analysis results shall communicate the primary answer before supporting information.
-
-Students shall be able to distinguish among:
-
-- Confirmed overall attendance.
-- Safe Bunk SAFE/UNSAFE result.
-- Attendance Recovery requirement.
-- Projected recovery information.
-- Hypothetical Future Attendance Simulation.
-- Supporting timetable information.
-
-Projected or hypothetical information shall not appear to be updated official attendance.
-
----
-
-### NFR-019 — Interaction Feedback
-
-Interactive controls shall provide visible feedback when their state changes.
-
-This is particularly important for:
-
-- ATTEND/BUNK selections.
-- File selection.
-- Upload actions.
-- Authentication actions.
-- Simulation period selection.
-- Retry actions.
-- Confirmation actions.
-
-Students should be able to understand the current application state without guessing whether an interaction was registered.
-
----
-
-## 9.5 Responsive Design
-
-### NFR-020 — Mobile-First Experience
-
-AttendSense shall use a mobile-first responsive design.
-
-The primary experience shall be optimized for smartphone usage while remaining fully usable on supported:
-
-- Smartphones.
-- Tablets.
-- Laptops.
-- Desktop computers.
-
----
-
-### NFR-021 — Screen Adaptation
-
-Layouts shall adapt appropriately to available screen dimensions.
-
-Normal mobile usage shall not require unnecessary horizontal scrolling.
-
-Important controls, schedule information, attendance states, and results shall remain readable and usable on smaller supported screens.
-
----
-
-### NFR-022 — Schedule Responsiveness
-
-Schedule-oriented interfaces used by Safe Bunk, Recovery, and Future Simulator shall remain usable across supported screen sizes.
-
-Schedule information shall remain sufficiently scannable when multiple:
-
-- Dates.
-- Lectures.
-- Laboratory sessions.
-- ATTEND/BUNK controls.
-
-are displayed.
-
----
-
-## 9.6 PWA Quality Requirements
-
-### NFR-023 — PWA Installability
-
-AttendSense shall satisfy the technical requirements necessary for PWA installation on supported browsers and platforms.
-
-The installed application shall include appropriate PWA identity information such as:
-
-- Application name.
-- Application icon.
-- Web app manifest information.
-- Required installation metadata.
-
-Installation support shall remain dependent on applicable platform/browser capabilities.
-
----
-
-### NFR-024 — Optional Installation
-
-PWA installation shall not be mandatory for normal Phase 1 usage.
-
-Students shall be able to access the core AttendSense application through a supported browser without installing the PWA.
-
-Functionality explicitly dependent on PWA installation, such as supported share-target integration, may require installation.
-
----
-
-### NFR-025 — App-Like Installed Experience
-
-When launched as an installed PWA on a supported platform, AttendSense shall provide an appropriate standalone app-like experience.
-
-Installation shall not create:
-
-- A separate AttendSense account.
-- Duplicate academic configuration.
-- Duplicate confirmed attendance data.
-
----
-
-### NFR-026 — Share-Target Quality
-
-Where PWA share-target functionality is supported and enabled, file reception shall integrate with the standard attendance-processing workflow.
-
-Share-target functionality shall not bypass:
-
-- Authentication requirements.
-- File validation.
-- Extraction.
-- Normalization.
-- Automatic validation.
-- Student review.
-- Student confirmation.
-
-Failure or lack of support for PWA share-target functionality shall not prevent the standard in-application attendance upload workflow from being used.
-
----
-
-## 9.7 Compatibility
-
-### NFR-027 — Browser Compatibility
-
-AttendSense shall support current mainstream browsers appropriate to the target student population.
-
-Priority shall be given to reliable operation on modern Chromium-based browsers.
-
-Reasonable compatibility with other modern browsers should be maintained where the required AttendSense functionality is supported.
-
-Browser-specific capabilities shall not be assumed to exist universally.
-
----
-
-### NFR-028 — PWA Platform Compatibility
-
-PWA capabilities may vary between:
-
-- Browsers.
-- Operating systems.
-- Installed-PWA environments.
-- Device types.
-
-AttendSense shall degrade gracefully when an optional PWA capability is unavailable.
-
-Lack of share-target support, for example, shall not prevent browser-based attendance upload and analysis.
-
----
-
-### NFR-029 — File Compatibility
-
-Attendance processing shall support the PDF and image formats formally approved for Phase 1.
-
-Unsupported or unreadable formats shall be rejected gracefully with a clear student-facing message.
-
-Exact supported extensions, size limits, and multi-image limits may be finalized during implementation planning and technical testing.
-
----
-
-## 9.8 Accessibility
-
-### NFR-030 — Web Accessibility
-
-AttendSense shall follow appropriate web accessibility practices.
-
-The application shall provide:
-
-- Readable typography.
-- Sufficient visual contrast.
-- Clearly labeled controls.
-- Meaningful form labels.
-- Visible focus states.
-- Keyboard-accessible essential functionality where appropriate.
-- Adequate touch-target sizes.
-- Understandable error feedback.
-- Attendance status communication that does not depend exclusively on color.
-
----
-
-### NFR-031 — Accessible Attendance States
-
-Important attendance states shall be communicated using more than visual color differences.
-
-Examples include:
-
-- SAFE.
-- UNSAFE.
-- Recovery Required.
-- Recovery Not Required.
-- Above 75%.
-- Below 75%.
-- Projected.
-- Hypothetical.
-
-Text, icons, labels, or other accessible indicators shall supplement color where appropriate.
-
----
-
-## 9.9 Availability, Connectivity, and Error Recovery
-
-### NFR-032 — Online-Only Phase 1
-
-AttendSense Phase 1 shall require network connectivity for normal operation.
-
-Full offline functionality shall not be required.
-
-The application shall not imply that an operation has been successfully completed when required backend communication could not occur.
-
----
-
-### NFR-033 — Connectivity Failure Handling
-
-When network connectivity is unavailable or interrupted, AttendSense shall provide an understandable connectivity state.
-
-Where appropriate, the application shall:
-
-- Preserve safe local interaction state where technically practical.
-- Avoid displaying false success.
-- Provide a retry action.
-- Preserve the previously confirmed server-side attendance dataset.
-
----
-
-### NFR-034 — Graceful Error Handling
-
-Unexpected application errors shall be handled gracefully where possible.
-
-The application shall avoid:
-
-- Blank screens.
-- Permanently loading interfaces.
-- Silent failures.
-- Misleading success states.
-
-The student shall receive an understandable error state and appropriate recovery action where available.
-
----
-
-### NFR-035 — Retry Capability
-
-Recoverable operations should support retry without requiring the student to restart the complete application workflow.
-
-Examples include:
-
-- Google authentication.
-- Attendance upload.
-- Attendance extraction.
-- Attendance processing.
-- Saving confirmed attendance.
-- Schedule loading.
-- Attendance recalculation.
-
-Retrying an operation shall not unintentionally duplicate confirmed attendance data.
-
----
-
-## 9.10 Maintainability
-
-### NFR-036 — Modular Implementation
-
-AttendSense shall maintain clear separation of responsibilities among major application areas including:
-
-- Authentication.
-- Academic configuration.
-- Attendance input.
-- PDF/image extraction.
-- Attendance normalization.
-- Attendance validation.
-- Attendance persistence.
-- Attendance calculation engine.
-- Timetable/calendar processing.
-- PWA functionality.
-- User interface.
-
-Changes to one major module should minimize unnecessary impact on unrelated modules.
-
----
-
-### NFR-037 — Calculation Engine Separation
-
-The deterministic attendance calculation engine shall remain logically separate from:
-
-- Document extraction.
-- User-interface components.
-- Authentication.
-- Database persistence.
-- Timetable presentation.
-
-This separation shall allow attendance formulas to be tested and maintained independently.
-
----
-
-### NFR-038 — Reusable Components
-
-Repeated UI patterns and application logic should use reusable components, utilities, or modules where appropriate.
-
-Examples may include:
-
-- ATTEND/BUNK controls.
-- Schedule cards.
-- Attendance status indicators.
-- Result presentation.
-- Loading states.
-- Error states.
-- Attendance-slot utilities.
-
-This shall reduce duplication and improve consistency.
-
----
-
-### NFR-039 — Configuration Separation
-
-Academic calendars, timetables, supported academic configurations, and similar periodically maintained information should remain separated from unrelated core calculation logic where practical.
-
-Updating academic scheduling information should not require rewriting attendance formulas.
-
----
-
-## 9.11 Scalability and Extensibility
-
-### NFR-040 — Extensible Academic Configuration
-
-The application architecture shall avoid unnecessary hard-coding that permanently couples AttendSense to one timetable or academic configuration.
-
-Supported academic configurations, timetable associations, and calendar associations should be maintainable without redesigning the core calculation engine.
-
----
-
-### NFR-041 — Input-Independent Calculation Engine
-
-The calculation engine shall remain independent of the method used to obtain attendance information.
-
-Whether the source is:
-
-- PDF.
-- Single image.
-- Multiple images.
-
-the calculation engine shall receive the same approved normalized attendance structure.
-
----
-
-### NFR-042 — Extraction Technology Replaceability
-
-The architecture should allow the selected PDF/OCR/vision processing technology to be modified or replaced without requiring redesign of the attendance calculation engine.
-
-Document-processing technology shall be responsible for obtaining attendance information.
-
-Deterministic attendance logic shall remain responsible for attendance calculations.
-
----
-
-### NFR-043 — Future Extension Readiness
-
-Phase 1 implementation should avoid architectural decisions that unnecessarily prevent future extension of:
-
-- Supported academic configurations.
-- Attendance input formats.
-- Timetables.
-- Academic calendars.
-- PWA capabilities.
-- Attendance-analysis functionality.
-
-This requirement shall not require implementation of those future capabilities during Phase 1.
-
----
-
-## 9.12 Testability
-
-### NFR-044 — Calculation Testability
-
-Core attendance formulas shall be independently testable without requiring the complete user interface or document-processing workflow.
-
-Tests shall cover important scenarios including:
-
-- Attendance above 75%.
-- Attendance exactly at 75%.
-- Attendance below 75%.
-- Effective Total Slots equal to zero or otherwise invalid.
-- Safe Bunk safe boundary.
-- Safe Bunk unsafe boundary.
-- Lecture ATTEND/BUNK effects.
-- Laboratory ATTEND/BUNK effects.
-- Recovery-slot boundaries.
-- Recovery across multiple weeks.
-- Future attendance scenarios.
-- Rounding boundaries.
-- 75% threshold boundaries.
-
----
-
-### NFR-045 — Attendance Normalization Testability
-
-Normalization rules shall be independently testable.
-
-Tests shall include scenarios such as:
-
-- Total Slots with No Attendance included.
-- Total Slots with No Attendance already excluded.
-- No Attendance equal to zero.
-- Invalid negative No Attendance values.
-- Effective Total Slots calculation.
-- Missing required values.
-- Contradictory extracted values.
-
----
-
-### NFR-046 — Attendance Validation Testability
-
-Attendance validation rules shall be testable independently where practical.
-
-Tests shall include:
-
-- Valid overall attendance data.
-- Present Slots greater than Effective Total Slots.
-- Negative Present Slots.
-- Invalid Effective Total Slots.
-- Attendance percentage outside the valid range.
-- Extracted percentage mismatch.
-- Duplicate/overlapping multi-image information.
-- Missing required attendance values.
-- Unresolved conflicting attendance information.
-
----
-
-### NFR-047 — Schedule Processing Testability
-
-Timetable and academic-calendar processing shall be testable independently from the UI.
-
-Tests should cover:
-
-- Normal academic working days.
-- Holidays.
-- Other non-working days.
-- Lecture occurrences.
-- Laboratory occurrences.
-- End-of-current-week Safe Bunk boundaries.
-- Multi-week Recovery scheduling.
-- Future Simulator date/range boundaries.
-- Missing timetable/calendar information.
-
----
-
-### NFR-048 — Dataset Replacement Testability
-
-Tests shall verify that the previous confirmed attendance dataset remains unchanged when a newer attendance submission:
-
-- Fails extraction.
-- Fails normalization.
-- Fails validation.
-- Is rejected during student review.
-- Fails persistence.
-
-Tests shall also verify that successful replacement occurs only after the newer dataset has completed all required confirmation and persistence stages.
-
----
-
-### NFR-049 — Hypothetical State Isolation Testability
-
-Tests shall verify that:
-
-- Safe Bunk selections do not modify confirmed attendance.
-- Recovery projections do not modify confirmed attendance.
-- Future Simulator selections do not modify confirmed attendance.
-- Passage of a simulated future date does not modify confirmed attendance.
-- Reopening an analysis begins from the applicable latest confirmed attendance dataset unless intentionally restoring temporary UI state.
-
----
-
-## 9.13 Observability and Operational Quality
-
-### NFR-050 — Operational Error Visibility
-
-The implementation should provide sufficient technical visibility for developers to diagnose application failures without exposing sensitive technical details to students.
-
-Operational diagnostics may include appropriate logging of:
-
-- Processing failures.
-- Validation failures.
-- Server errors.
-- External service failures.
-- Unexpected calculation failures.
-
-Sensitive authentication or attendance information shall not be unnecessarily included in diagnostic logs.
-
-Detailed security and logging requirements shall remain governed by Section 10.
-
----
-
-### NFR-051 — External Dependency Failure
-
-Failure of an external dependency shall not result in fabricated or unverified attendance results.
-
-Where an external service required for attendance extraction becomes unavailable:
-
-- The processing operation shall fail safely.
-- The student shall receive an appropriate error.
-- The previous confirmed attendance dataset shall remain unchanged.
-- The student may retry when the required service becomes available.
-
----
-
-## 9.14 Non-Functional Quality Principle
-
-AttendSense shall prioritize:
-
-**Accuracy → Reliability → Data Integrity → Usability → Performance → Visual Polish**
-
-This priority does not mean that performance or visual quality are unimportant.
-
-It means that AttendSense shall never intentionally sacrifice attendance correctness or confirmed-data integrity merely to:
-
-- Produce a faster result.
-- Avoid displaying an error.
-- Create a smoother-looking interaction.
-- Produce a result when required information is uncertain.
-
-When AttendSense cannot reliably determine the information required for an attendance calculation, it shall communicate the limitation rather than produce a potentially misleading result.
+This section shall not introduce notifications, offline operation, ERP integration, an admin or faculty portal, multi-college support, AI attendance decision-making, historical analytics, new calculators, or automatic attendance synchronization.
 
 # 10. Security and Privacy Requirements
 
