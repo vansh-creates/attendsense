@@ -3370,1954 +3370,442 @@ This section shall not introduce notifications, offline operation, ERP integrati
 
 # 10. Security and Privacy Requirements
 
-This section defines the security and privacy requirements for the Phase 1 version of AttendSense.
+## 10.1 Security Scope
 
-AttendSense shall follow the principle of collecting, processing, storing, and exposing only the information necessary for the application's intended functionality.
+AttendSense Phase 1 shall protect three independently confirmed persisted inputs:
 
-Security controls shall protect user authentication, attendance information, uploaded files, academic configuration, persisted attendance data, hypothetical attendance-analysis data, and application functionality from unauthorized access or modification.
+1. Latest confirmed course-aware attendance dataset.
+2. Confirmed student-uploaded timetable.
+3. Confirmed student-uploaded official SPCE Academic Calendar.
 
----
-
-## 10.1 Google Authentication Security
-
-### SR-001 — Google-Based Authentication
-
-AttendSense shall use **Sign in with Google** as the authentication mechanism for Phase 1.
-
-AttendSense shall not require students to create or maintain a separate AttendSense password.
-
-Authentication shall rely on the verified Google identity returned through the configured Google authentication mechanism.
-
-Any valid Google account may be used to authenticate during Phase 1.
-
-Google authentication shall verify the user's Google identity but shall not be treated as verification of official student enrollment.
+Only structured data that has completed the applicable input, validation, extraction or structuring, automatic validation, student review/edit, confirmation, and save or persistence workflow may become trusted persisted data.
 
 ---
 
-### SR-002 — Authentication Verification
+## 10.2 Authentication and Session Security
 
-Authentication information received from Google shall be securely verified before an AttendSense authenticated session is established.
+Phase 1 shall use Sign in with Google and shall not require a separate AttendSense password.
 
-The application shall not trust client-provided identity information without the required authentication verification.
+Google authentication shall be securely verified, associated with a stable Google identity, and restore the same AttendSense account for a returning user. A valid authenticated session shall be required for protected functionality, and logout shall invalidate the active session. Reauthentication shall be required when a valid session is unavailable.
 
----
-
-### SR-003 — Google Identity Association
-
-Each AttendSense account shall be associated with the corresponding authenticated Google identity.
-
-The system shall use a stable identifier provided through the Google authentication process to recognize returning users.
-
-A returning user authenticating with the same associated Google identity shall access the existing AttendSense account rather than creating a new account.
+PWA installation or reinstallation shall not create, delete, or bypass the server-side account, authentication, or authorization.
 
 ---
 
-## 10.2 Authentication Session Security
+## 10.3 Privacy and User-Data Isolation
 
-### SR-004 — Protected Application Access
+AttendSense shall collect and retain only information required for authentication, academic context, the latest confirmed course-aware attendance dataset, confirmed timetable, confirmed Academic Calendar, required mappings or batch applicability, and approved analysis functionality.
 
-Functionality requiring authentication shall only be accessible through a valid authenticated session.
+Academic configuration provides academic context only. Timetable and Academic Calendar data are student-uploaded and independently confirmed; they shall not be automatically associated by academic configuration.
 
-Unauthenticated users attempting to access protected functionality shall be redirected or required to authenticate.
+A student shall never access or modify another student's uploads, extracted data, confirmed attendance, timetable, Academic Calendar, academic configuration, mappings, temporary Safe Bunk selections, Recovery projections, Future Simulator scenarios, analysis results, or account information.
 
----
-
-### SR-005 — Session Validation
-
-AttendSense shall validate the user's authentication state before providing access to protected user-specific functionality.
-
-Expired, invalid, or otherwise unusable sessions shall not provide access to protected functionality.
+Authorization shall be enforced in trusted application or server logic, not merely by hiding UI elements or trusting a client-provided user identifier.
 
 ---
 
-### SR-006 — Logout Security
+## 10.4 Untrusted Upload and File-Processing Security
 
-When a student logs out:
+All uploaded documents shall be treated as untrusted input.
 
-- The current authenticated session shall be invalidated appropriately.
-- Protected functionality shall no longer be accessible through that session.
-- Reauthentication shall be required before protected functionality can be accessed again.
+Supported input security shall distinguish:
 
-Logging out shall not delete:
+- Attendance: PDF, one image, or multiple images.
+- Timetable: image or screenshot only.
+- Academic Calendar: PDF only.
+- PWA share target: supported attendance files only, where supported and successfully validated.
 
-- The student's AttendSense account.
-- Academic configuration.
-- Latest confirmed attendance dataset.
+Validation shall consider actual supported type, file size, readability, corruption, image-count limits where applicable, and safe processing characteristics. Filename, extension, and client-provided MIME type shall not be trusted alone.
 
----
-
-### SR-007 — PWA Authentication
-
-Installing or uninstalling the AttendSense PWA shall not create or delete the user's server-side AttendSense account.
-
-If local authentication state is unavailable after:
-
-- PWA reinstallation.
-- Browser data removal.
-- Application data removal.
-- Session expiration.
-- Manual logout.
-- Access from another supported device or browser.
-
-the student shall authenticate again using Google.
-
-After successful authentication using the same associated Google identity, AttendSense shall recognize the existing account and restore the user's persisted application information.
+Uploaded files shall not be executed. Document-processing components shall have only the access necessary for extraction and validation. Processing failures shall not expose another user's data, overwrite confirmed data, bypass review, create trusted calculation data, or expose secrets or internal system information.
 
 ---
 
-## 10.3 User Data Privacy
+## 10.5 Course-Aware Attendance Integrity
 
-### SR-008 — Data Minimization
+The trusted attendance model shall be course-aware.
 
-AttendSense shall collect and maintain only user information required for application functionality.
+Calculation-critical records may include course code, course identity or label, Theory or Practical identity, conducted, present, absent, calculated course percentage, calculation eligibility, and review or mapping state where applicable.
 
-Phase 1 shall avoid collecting unnecessary sensitive or institutional student information.
+Where a valid structured course code exists, it shall be the authoritative primary identity. Minor OCR course-name errors shall not override a valid course-code identity. Theory and Practical records with separate official codes shall remain separate. Code-less or ambiguous records shall not silently become calculation-eligible.
 
-AttendSense shall not require official student enrollment numbers solely for authentication.
+Validation shall include, where applicable:
 
----
+- Present plus absent equals conducted.
+- Conducted, present, and absent are non-negative.
+- Present and absent do not exceed conducted.
+- Percentage is within valid bounds where applicable.
+- Extracted or reported percentage consistency where used for validation.
+- Duplicate or conflicting records.
+- Unresolved mapping or review states.
 
-### SR-009 — Google Account Information
-
-AttendSense shall request only the Google identity information required for authentication and account functionality.
-
-The application shall not request unnecessary access to unrelated Google account services or information.
-
----
-
-### SR-010 — Academic Configuration Privacy
-
-Academic configuration associated with a user shall only contain information required to determine the applicable timetable, academic calendar, and related AttendSense functionality.
-
-The application shall avoid collecting unrelated academic or personal information.
+Overall attendance and No Attendance information may be retained only as supporting context, normalization, validation, or traceability. They shall not be the primary calculation model.
 
 ---
 
-## 10.4 Attendance File Security
+## 10.6 Session, Timetable, and Academic Calendar Integrity
 
-### SR-011 — Upload Validation
+One confirmed scheduled attendance event shall equal one future attendance occurrence for its matched course.
 
-Uploaded or shared attendance files shall be validated before being accepted for processing.
+If a practical or laboratory session spans multiple timetable periods but is confirmed as one continuous session, it shall count as one scheduled attendance event. AttendSense shall not apply universal lecture, laboratory, or duration-based attendance weighting.
 
-Validation shall include applicable checks such as:
+The confirmed timetable shall be student-uploaded as an image or screenshot, extracted, validated, manually reviewable and editable, explicitly confirmed, and persisted until replaced. Trusted timetable data shall preserve where applicable day or date, start and end time, course or session identity, course code, Theory or Practical identity, batch applicability, continuous multi-period structure, and mapping or review state.
 
-- Supported file type.
-- Configured file-size limit.
-- Valid file structure where possible.
-- Maximum permitted number of uploaded images.
-- Whether the file can be safely processed by the attendance-processing pipeline.
+The confirmed Academic Calendar shall be the official SPCE calendar uploaded by the student as a PDF, extracted, validated, manually reviewable and editable, explicitly confirmed, and persisted until replaced. Trusted calendar data shall preserve Teaching, Teaching Continues, Non-Teaching, Unknown or Requires Review, date or range, and scope or applicability metadata.
 
-A file shall not be trusted solely because of its filename or extension.
-
-Where technically practical, AttendSense shall validate the actual file type or relevant content characteristics rather than relying exclusively on the filename extension or client-provided MIME type.
+Unconfirmed or ambiguous timetable information shall not silently become trusted calculation input. Unknown or ambiguous calendar information shall not silently suppress timetable classes.
 
 ---
 
-### SR-012 — Restricted Attendance Upload Access
+## 10.7 Trusted Calculation Validation
 
-Protected attendance-file processing shall only be available to authenticated users.
+Authoritative calculations shall use trusted validated application logic. Client-provided calculated percentages, projected results, eligibility, or safety labels shall not automatically be trusted.
 
-An uploaded or shared attendance file shall be associated only with the authenticated user/session performing the relevant attendance workflow.
+Trusted logic shall enforce course-aware attendance mathematics, the fixed 75% threshold, course-code matching, Theory or Practical separation, batch applicability, calendar applicability, current-time rules where applicable, deterministic formulas, full internal precision, and display rounding only after calculation.
 
-Where a file is received through PWA share-target functionality while no valid authenticated session exists, protected attendance processing shall not proceed until the required authentication has successfully completed.
-
----
-
-### SR-013 — Safe File Handling
-
-Uploaded PDFs and images shall be treated as untrusted input.
-
-AttendSense shall not execute content contained within uploaded files.
-
-Uploaded files shall only be processed using the mechanisms required for:
-
-- Attendance extraction.
-- Normalization.
-- Validation.
-- Student review and confirmation.
-
-File-processing components shall operate only with the access required to perform the intended attendance-processing operation.
+Generative AI or LLM output shall not determine calculation-critical attendance results.
 
 ---
 
-### SR-014 — PWA Share-Target File Security
+## 10.8 Safe Bunk and Simulator Input Security
 
-Attendance files received through supported PWA share-target functionality shall be subject to the same security and data-integrity requirements as files selected directly within AttendSense.
+Safe Bunk shall use explicit bunk selection only. Trusted logic shall revalidate that selected classes are today's applicable matched sessions, satisfy current_time before class_start_time, and meet course, batch, calendar, and time applicability requirements.
 
-A shared file shall not bypass:
+Only explicitly selected bunk classes shall affect a Safe Bunk projection. Unselected displayed classes shall have no projected effect. Manipulated client selections shall not bypass trusted session or course validation.
 
-- Authentication requirements.
-- File validation.
-- Safe file processing.
-- Attendance extraction.
-- Attendance normalization.
-- Automatic validation.
-- Student review.
-- Student confirmation.
-- Data-retention requirements.
-
-Receiving a shared file shall not automatically create or replace a confirmed attendance dataset.
-
-If a shared file is received while the student is unauthenticated, AttendSense may temporarily retain the input only where the selected technical implementation can do so safely and reliably.
-
-If the shared input cannot be safely retained through authentication, the student shall be required to provide the attendance file again.
+Future Simulator ATTEND and BUNK/MISS scenario selections remain valid hypothetical inputs and shall be revalidated against applicable confirmed schedule data.
 
 ---
 
-## 10.5 User Data Isolation
+## 10.9 Hypothetical-Data Isolation
 
-### SR-015 — User-Specific Data Access
+Confirmed attendance, confirmed timetable, confirmed Academic Calendar, Safe Bunk selections, Recovery projections, Future Simulator scenarios, and calculated or projected results shall remain logically separated.
 
-A student shall not be able to access another user's:
-
-- Uploaded attendance information.
-- Extracted attendance data.
-- Confirmed attendance data.
-- Academic configuration.
-- Attendance calculation or simulation information.
-- User-specific account information.
-
-User-specific data access shall be restricted to the authenticated account to which the data belongs.
+Safe Bunk, Recovery, and Future Simulator shall never modify confirmed attendance. Passage of time shall not convert a planned or simulated action into confirmed attendance. A calculator result shall not become input to another calculator as if it were official attendance.
 
 ---
 
-### SR-016 — Server-Side Authorization
+## 10.10 Persistence and Safe Replacement
 
-Access restrictions for protected user data shall not rely exclusively on hiding interface elements.
+The persisted attendance dataset shall be capable of representing course-aware records required for approved calculations, including course identity, Theory or Practical identity, conducted, present, absent, calculated percentage, calculation eligibility, validation or mapping metadata, supporting overall information where useful, and dataset ownership metadata.
 
-Where user-specific data is requested, created, updated, replaced, or deleted, AttendSense shall verify authorization in trusted server-side application logic where applicable.
+Confirmed timetable and confirmed Academic Calendar data shall be associated with the authenticated user's account, protected from other users, and reused until explicitly and successfully replaced. Logging out or reinstalling the PWA shall not delete them.
 
-Attendance dataset replacement shall only be performed for the authenticated user who owns the applicable confirmed attendance dataset.
+For attendance, timetable, and Academic Calendar independently, existing confirmed data shall remain active while replacement input is received, validated, extracted or structured, automatically validated, reviewed or edited, awaiting confirmation, or being saved.
 
----
-
-### SR-017 — Database Access Protection
-
-Persisted user-specific data shall be accessed through authorized application operations and shall not be directly exposed to unauthenticated clients.
-
-Database credentials, privileged database operations, and other server-side data-access secrets shall not be exposed to browser/client code.
-
-Client-provided user identifiers shall not by themselves be treated as sufficient authorization to access or modify user-specific database records.
+Replacement shall occur only after successful validation, extraction or structuring, review/edit, explicit student confirmation, and successful persistence. If any required stage fails or the student rejects the replacement, the previous confirmed data shall remain active. Partially processed replacement data shall not overwrite confirmed data.
 
 ---
 
-## 10.6 Attendance Data Integrity
+## 10.11 Source Files, Input Validation, and Retention
 
-### SR-018 — Extraction Integrity
+Original attendance PDFs or images, timetable images or screenshots, and Academic Calendar PDFs shall be treated as temporary processing inputs unless implementation genuinely requires otherwise.
 
-Raw attendance extraction results shall not be treated as automatically trustworthy.
+Once confirmed structured data is successfully persisted and an original source file is no longer needed, it should be removed according to the selected temporary-storage policy. Failed or rejected processing should also clean temporary files after they are no longer needed. AttendSense shall not require permanent storage of original documents or a fixed retention duration.
 
-Attendance information shall pass through the approved workflow:
-
-**Attendance Input → Extraction → Normalization → Automatic Validation → Student Review → Student Confirmation**
-
-before becoming eligible for attendance calculations or persistence as the student's latest confirmed attendance dataset.
+Application input validation shall cover academic configuration, attendance, timetable and Academic Calendar uploads, manual review corrections, Safe Bunk explicit bunk selections, Recovery inputs where applicable, Future Simulator ATTEND or BUNK/MISS selections, future simulation range, and replacement operations.
 
 ---
 
-### SR-019 — Calculation Input Protection
+## 10.12 Communication, Secrets, Logging, and Errors
 
-The attendance calculation engine shall only accept attendance values that satisfy the application's required validation rules.
+Production communication shall use HTTPS. Authentication information, session data, uploaded documents, confirmed attendance, timetable or calendar data, and other protected user-specific data shall not intentionally travel over unsecured HTTP in production.
 
-The system shall prevent invalid values such as:
+Secrets shall not be hard-coded into public source code, exposed to client code when server-confidential, committed to a public repository, logged, or exposed in user-facing errors. This includes OAuth, authentication, database, storage, and document-processing service credentials without requiring a specific vendor.
 
-- Negative Overall Present Slots.
-- Negative No Attendance slots where applicable.
-- Overall Present Slots greater than Overall Effective Total Slots.
-- Overall Effective Total Slots less than or equal to zero where a percentage calculation is required.
-- Attendance percentages outside the valid 0%–100% range.
-- Missing required attendance values.
-- Incorrect or unresolved No Attendance normalization.
-- Unresolved conflicting attendance information.
+Logs shall not unnecessarily contain authentication secrets, access or session tokens, database or storage credentials, raw uploaded documents, or sensitive user-specific structured data. Operational diagnostics may use minimized information only where genuinely required and shall not expose technical diagnostics to students.
 
-from being treated as valid calculation inputs.
+User-facing errors shall be safe and clear without exposing internal implementation details.
 
 ---
 
-### SR-020 — Trusted Calculation Validation
+## 10.13 PWA Security and Phase 1 Boundaries
 
-Security- and integrity-critical attendance rules shall not depend exclusively on values supplied or modified through the client interface.
+PWA share-target input shall be limited to supported attendance files, conditional on platform support and successful validation, and shall follow the same authentication, security, validation, review, confirmation, and save pipeline as standard attendance upload. Share-target failure shall not weaken or prevent standard upload security.
 
-Where applicable, attendance values, feature eligibility, attendance-slot weights, normalization rules, and calculation inputs shall be validated or applied in trusted application logic before authoritative calculation results are produced.
-
-The defined Phase 1 attendance-slot weights shall remain:
-
-- **Lecture = 1 attendance slot**
-- **Laboratory session = 2 attendance slots**
-
----
-
-### SR-021 — Hypothetical Attendance Data Isolation
-
-Safe Bunk selections, Attendance Recovery projections, and Future Attendance Simulator scenarios shall remain logically separate from the student's latest confirmed attendance dataset.
-
-Hypothetical or projected attendance information shall not overwrite, modify, or become confirmed attendance merely because it has been:
-
-- Calculated.
-- Displayed.
-- Temporarily stored in client state.
-- Revisited later.
-- Associated with a date that has subsequently passed.
-
-Safe Bunk, Attendance Recovery, and Future Attendance Simulator results shall not modify the student's latest confirmed attendance dataset.
-
-Confirmed attendance shall change only when a newer attendance submission successfully completes the required:
-
-**Input → Extraction → Normalization → Automatic Validation → Student Review → Student Confirmation → Persistence**
-
-workflow.
-
----
-
-## 10.7 Input Validation
-
-### SR-022 — User Input Validation
-
-User-provided application inputs shall be validated before being processed or stored.
-
-Validation shall be appropriate to the expected data type and intended use.
-
-Examples include:
-
-- Academic configuration selections.
-- Uploaded or shared file metadata.
-- Calculation parameters.
-- Future class selections.
-- Safe Bunk ATTEND/BUNK selections.
-- Future Attendance Simulator ATTEND/BUNK selections.
-- Future simulation date/range selections.
-
----
-
-### SR-023 — Malformed Input Handling
-
-Malformed, manipulated, or unexpected input shall not cause AttendSense to expose internal application information or produce uncontrolled application behavior.
-
-Invalid input shall be rejected gracefully.
-
----
-
-## 10.8 Communication Security
-
-### SR-024 — HTTPS
-
-Production deployment of AttendSense shall use HTTPS.
-
-Authentication information, session information, uploaded attendance data, user-specific information, and other protected communication shall not intentionally be transmitted over unsecured HTTP in production.
-
----
-
-### SR-025 — Secure Authentication Communication
-
-Authentication-related communication shall use the security mechanisms required by the selected Google authentication implementation.
-
-Authentication credentials, tokens, or other sensitive authentication information shall not be unnecessarily exposed through:
-
-- Application URLs.
-- Logs.
-- User-facing interfaces.
-- Client-visible error messages.
-
----
-
-## 10.9 Secrets and Configuration Security
-
-### SR-026 — Secret Management
-
-Application secrets and sensitive configuration shall not be hard-coded into publicly accessible source code or exposed to client-side code where they are intended to remain confidential.
-
-Examples include:
-
-- Authentication secrets.
-- OAuth client secrets, where applicable.
-- Database credentials.
-- Storage credentials.
-- External document-processing credentials, if introduced during implementation.
-
-Sensitive values shall be managed using appropriate environment and configuration mechanisms.
-
----
-
-### SR-027 — Repository Protection
-
-Secrets shall not be intentionally committed to the public Git repository.
-
-Configuration examples intended for the repository shall use placeholder values rather than real credentials.
-
-Environment files containing sensitive production credentials shall not be publicly committed.
-
----
-
-## 10.10 Error Information Security
-
-### SR-028 — User-Facing Errors
-
-User-facing error messages shall provide enough information for the student to understand the problem without unnecessarily exposing:
-
-- Stack traces.
-- Database information.
-- Internal server paths.
-- Secret values.
-- Authentication tokens.
-- Internal implementation details.
-
-Detailed technical errors may be recorded using appropriate development or server-side logging mechanisms where required.
-
----
-
-## 10.11 Application Logging
-
-### SR-029 — Sensitive Data Logging
-
-AttendSense shall avoid unnecessarily recording sensitive user information in application logs.
-
-The system shall not intentionally log:
-
-- Authentication secrets.
-- Session credentials.
-- Access tokens.
-- OAuth secrets.
-- Database credentials.
-- Raw secret configuration values.
-
-Uploaded attendance document content shall not be unnecessarily duplicated into application logs.
-
-Extracted or confirmed attendance information shall only be logged when genuinely required for controlled debugging or operational purposes and shall be minimized appropriately.
-
----
-
-## 10.12 Attendance Data Persistence and Retention
-
-### SR-030 — Confirmed Attendance Data Persistence
-
-AttendSense shall persist the student's latest successfully validated and confirmed attendance dataset.
-
-This allows the student to return to AttendSense and continue using attendance-analysis functionality without uploading attendance data every time the application is opened.
-
-The persisted latest confirmed attendance dataset may contain normalized information required by AttendSense, including:
-
-- **Overall Present Slots.**
-- **Overall Effective Total Slots.**
-- Displayed or Reported Total Slots, where required for normalization or traceability.
-- No Attendance or equivalent non-attendance slots, where applicable.
-- Calculated Overall Attendance Percentage.
-- Relevant validation metadata required by the implementation.
-- Information required to identify and manage the latest confirmed attendance dataset.
-
-Individual subject-wise attendance percentages shall not form the calculation basis of the persisted Phase 1 attendance dataset.
-
-Course-level or other extracted information shall only be persisted where it is genuinely required by the final implementation for supported application functionality, validation, or traceability.
-
-The persisted attendance dataset shall remain associated with the student's AttendSense account until it is:
-
-- Successfully replaced by newer confirmed attendance data, or
-- Removed according to an authorized application operation or future retention requirement.
-
-Logging out or reinstalling the PWA shall not automatically delete the student's latest confirmed attendance dataset.
-
----
-
-### SR-031 — Uploaded Source File Retention
-
-Original uploaded or shared PDF/image files shall be treated as **temporary processing inputs**.
-
-They shall not be retained longer than necessary to complete the required attendance-processing workflow.
-
-The required workflow shall be:
-
-**PDF/Image Received**
-
-↓
-
-**File Validation**
-
-↓
-
-**Attendance Extraction**
-
-↓
-
-**Normalization**
-
-↓
-
-**Automatic Validation**
-
-↓
-
-**Student Review**
-
-↓
-
-**Student Confirmation**
-
-↓
-
-**Normalized Attendance Successfully Persisted**
-
-↓
-
-**Original Upload No Longer Required**
-
-↓
-
-**Original PDF/Image Removed**
-
-Once the normalized attendance dataset has been successfully persisted and the original source file is no longer required for the active workflow, the original file shall be removed according to the selected temporary-storage mechanism.
-
-If processing fails, validation fails, or the student rejects the interpreted dataset, temporary uploaded files shall also be removed after they are no longer required for the active processing or error-handling workflow.
-
-AttendSense shall avoid maintaining unnecessary permanent copies of uploaded attendance documents.
-
-Temporary-file cleanup behavior shall be included in implementation and testing requirements for the selected storage architecture.
-
----
-
-### SR-032 — Attendance Dataset Replacement
-
-When a student provides newer attendance data, AttendSense shall process the new submission independently from the student's existing confirmed attendance dataset.
-
-The existing confirmed attendance dataset shall remain unchanged while the new submission is being:
-
-- Received.
-- Validated as a file/input.
-- Extracted.
-- Normalized.
-- Automatically validated.
-- Reviewed by the student.
-
-The existing dataset shall only be replaced after the new attendance dataset has:
-
-1. Passed required file/input validation.
-2. Been successfully extracted.
-3. Been successfully normalized.
-4. Passed required automatic validation.
-5. Been reviewed by the student.
-6. Been explicitly confirmed by the student.
-7. Been successfully persisted.
-
-The replacement workflow shall therefore be:
-
-**Existing Confirmed Attendance**
-
-↓
-
-**Student Provides New Attendance**
-
-↓
-
-**New Input Validated**
-
-↓
-
-**New Data Extracted**
-
-↓
-
-**New Data Normalized**
-
-↓
-
-**New Data Automatically Validated**
-
-↓
-
-**Student Reviews New Data**
-
-↓
-
-**Student Confirms New Data**
-
-↓
-
-**New Data Successfully Saved**
-
-↓
-
-**Previous Attendance Dataset Replaced**
-
-↓
-
-**New Dataset Becomes Latest Confirmed Attendance Dataset**
-
-The replacement operation shall only affect the confirmed attendance dataset belonging to the authenticated user performing the update.
-
-The previous confirmed attendance dataset shall not be erased merely because a new upload or update was attempted.
-
----
-
-### SR-033 — Failed Replacement Protection
-
-If a new attendance submission:
-
-- Fails to upload or be received.
-- Fails file validation.
-- Fails extraction.
-- Fails normalization.
-- Fails automatic validation.
-- Contains incomplete information.
-- Contains unresolved conflicting information.
-- Is rejected by the student during review.
-- Fails to persist successfully.
-
-the student's existing confirmed attendance dataset shall remain unchanged.
-
-A failed attendance update shall never automatically destroy the last successfully confirmed attendance dataset.
-
----
-
-### SR-034 — Latest Confirmed Attendance Dataset
-
-AttendSense shall maintain only the latest confirmed attendance dataset as the student's current confirmed attendance state for Phase 1.
-
-After a new dataset successfully replaces the previous dataset, the previous dataset shall no longer be treated as the student's current confirmed attendance information.
-
-Phase 1 shall not require historical attendance-upload version tracking unless such functionality is explicitly introduced later.
-
-Calculated, projected, or simulated attendance results shall never become the latest confirmed attendance dataset automatically.
-
----
-
-## 10.13 Client-Side Data Protection
-
-### SR-035 — Sensitive Browser Storage
-
-Sensitive authentication credentials, application secrets, database credentials, or privileged service credentials shall not be stored in insecure client-side storage.
-
-AttendSense shall use the session-management mechanisms provided by the selected authentication architecture.
-
-Client-side storage, where used for non-secret application state, shall not be treated as a trusted source for security-sensitive or attendance-integrity-sensitive decisions.
-
----
-
-### SR-036 — Client Trust Boundary
-
-AttendSense shall treat client-side input as untrusted.
-
-Client-side validation may be used to improve the user experience, but required:
-
-- Authentication.
-- Authorization.
-- Attendance validation.
-- Data-integrity validation.
-- Dataset ownership validation.
-- Security-critical calculation rules.
-
-shall also be enforced in trusted application logic where applicable.
-
-Client-side modification of attendance values, slot weights, eligibility states, user identifiers, or other protected values shall not by itself modify authoritative persisted data or bypass server-side controls.
-
----
-
-## 10.14 External Processing Service Security and Privacy
-
-### SR-037 — External Attendance-Processing Services
-
-If an external OCR, vision, PDF-processing, storage, or related service receives attendance files or extracted attendance information, the service shall be evaluated before production use for appropriate:
-
-- Security characteristics.
-- Privacy characteristics.
-- Data-handling practices.
-- Data-retention behavior.
-- Transmission security.
-- Credential-management requirements.
-- Suitability for the attendance information being processed.
-
-AttendSense shall avoid transmitting more user information to an external processing service than is necessary for the required attendance-processing operation.
-
-Where technically possible and appropriate, information unrelated to the required attendance extraction operation should not be transmitted to external processing services.
-
-The selection of an external processing service shall not remove AttendSense's requirement for automatic validation and mandatory student confirmation of interpreted attendance information.
-
----
-
-### SR-038 — External Service Credentials
-
-Credentials used to access external document-processing, storage, OCR, vision, or related services shall remain protected through appropriate server-side secret-management mechanisms.
-
-Such credentials shall not be exposed in browser/client code when they are intended to remain confidential.
-
----
-
-## 10.15 Dependency Security
-
-### SR-039 — Trusted Dependencies
-
-AttendSense shall use established and actively maintained libraries and frameworks where practical.
-
-Unnecessary third-party dependencies shall be avoided.
-
-Dependencies that handle security-sensitive functionality shall be selected carefully.
-
-Particular attention shall be given to dependencies involved in:
-
-- Authentication.
-- File processing.
-- Database access.
-- Session management.
-- PWA functionality.
-- External service communication.
-
----
-
-### SR-040 — Dependency Maintenance
-
-Critical application dependencies shall be kept reasonably updated during development and production maintenance.
-
-Known critical security vulnerabilities affecting production dependencies shall be resolved, mitigated, or otherwise formally assessed and accepted before production deployment.
-
-Dependencies that are abandoned, compromised, or no longer appropriate for secure production use shall be replaced where necessary.
-
----
-
-## 10.16 Privacy Transparency
-
-### SR-041 — Privacy Information
-
-AttendSense shall provide users with clear information regarding the categories of information processed by the application.
-
-This should include, where applicable:
-
-- Google account information used for authentication.
-- Academic configuration.
-- Uploaded or shared attendance files.
-- Extracted attendance information.
-- Confirmed normalized attendance information.
-- Attendance calculations.
-- Safe Bunk planning information.
-- Attendance Recovery projections.
-- Future Attendance Simulator scenarios.
-- Use of external document-processing services where applicable.
-
-Where original attendance files are treated as temporary processing inputs, the application's privacy information shall communicate this behavior appropriately.
-
-Where attendance information is transmitted to an external processing service, the application's privacy information shall communicate the relevant processing behavior as required by the selected production architecture and applicable requirements.
-
----
-
-### SR-042 — Authentication Transparency
-
-AttendSense shall clearly distinguish between:
-
-- Google authentication, and
-- Official institutional student verification.
-
-Because Phase 1 permits authentication using a valid Google account, AttendSense shall not represent Google authentication as proof of official institutional enrollment.
-
----
-
-### SR-043 — Confirmed vs Hypothetical Data Transparency
-
-AttendSense shall clearly distinguish between:
-
-- Latest confirmed attendance data.
-- Safe Bunk projections.
-- Attendance Recovery projections.
-- Future Attendance Simulator results.
-
-Hypothetical or projected attendance information shall not be represented to the student as updated official attendance information.
-
-The application shall clearly communicate that attendance-analysis results do not modify confirmed attendance data.
-
----
-
-## 10.17 Security Failure Principle
-
-### SR-044 — Fail-Safe Behaviour
-
-When a security-sensitive or data-integrity-sensitive operation cannot be safely completed, AttendSense shall prefer denying or stopping the operation rather than bypassing the required control.
-
-Examples include:
-
-- Invalid authentication.
-- Expired session.
-- Unauthorized user-data request.
-- Cross-user data-access attempt.
-- Invalid attendance upload.
-- Unsafe or unsupported shared-file input.
-- Failed attendance validation.
-- Invalid calculation input.
-- Failed attendance dataset replacement.
-- Failure to safely persist confirmed attendance.
-- Failure to safely process an external-service request where required.
-
-Where possible, the application shall provide the student with an appropriate recovery action.
-
-A security or processing failure shall not silently convert uncertain information into trusted attendance information.
-
----
-
-## 10.18 Phase 1 Security and Privacy Principle
-
-AttendSense Phase 1 shall follow the principles of:
-
-**Minimum Required Data → Verified Authentication → Authorization & User Data Isolation → Validated Input → Secure Processing → Student Confirmation → Minimum Necessary Retention**
-
-For attendance data specifically:
-
-**Original PDF/Image = Temporary Processing Input**
-
-**Validated + Student-Confirmed Normalized Attendance = Persisted Latest Confirmed Attendance Dataset**
-
-**New Successfully Confirmed and Persisted Attendance = Replaces Previous Confirmed Attendance**
-
-**Safe Bunk / Recovery / Future Simulation = Hypothetical Analysis That Does Not Modify Confirmed Attendance**
-
-A failed or rejected new upload shall not remove the student's last successfully confirmed attendance dataset.
-
-A shared attendance file shall not bypass the standard authentication, validation, processing, review, confirmation, or retention requirements.
-
-Security and privacy controls shall remain proportional to the information and functionality handled by AttendSense while avoiding unnecessary collection or permanent storage of student information.
+This section shall not introduce passwords, OTP authentication, ERP integration, faculty or admin accounts, notifications, offline operation, multi-college support, historical attendance analytics, automatic attendance synchronization, AI attendance decision-making, or new calculators.
 
 # 11. Technology and System Constraints
 
-This section defines the approved Phase 1 technology stack, technical boundaries, and system-level constraints for AttendSense.
+## 11.1 Approved Primary Stack
 
-The technologies explicitly defined in this section are considered approved Phase 1 technology decisions and shall be followed during implementation planning.
+AttendSense Phase 1 shall be a Progressive Web Application built with:
 
-Lower-level implementation technologies that are not yet finalized, particularly attendance document-extraction technologies, shall be evaluated and selected during the Implementation Plan.
+- Next.js, React, and TypeScript for the frontend application.
+- Tailwind CSS for styling.
+- Next.js server-side capabilities and Route Handlers where appropriate.
+- Sign in with Google for authentication.
+- PostgreSQL with Prisma ORM for persistence.
+- Deterministic TypeScript logic for calculations.
+- Vercel for deployment.
+- Git and GitHub for version control and repository hosting.
 
----
-
-## 11.1 Phase 1 Technology Stack
-
-AttendSense Phase 1 shall use the following primary technology stack.
-
-| System Area | Approved Technology |
-|---|---|
-| Application Type | Progressive Web Application (PWA) |
-| Frontend Framework | Next.js |
-| UI Library | React |
-| Programming Language | TypeScript |
-| Styling | Tailwind CSS |
-| Backend | Next.js server-side capabilities and Route Handlers |
-| Authentication | Sign in with Google |
-| Database | PostgreSQL |
-| ORM | Prisma ORM |
-| Attendance Calculation Engine | TypeScript-based deterministic calculation logic |
-| PDF Attendance Processing | To be finalized during Implementation Planning |
-| Image/OCR Processing | To be finalized during Implementation Planning |
-| Deployment | Vercel |
-| Version Control | Git |
-| Source Repository | GitHub |
-
-The approved technologies shall form the foundation of the Phase 1 implementation.
-
-Supporting libraries and services may be introduced during implementation where required, provided that they do not contradict the requirements defined in this PRD.
+No additional framework, service, vendor, or lower-level library is required by this PRD unless approved elsewhere. Exact production libraries, providers, deployment configuration, scaling choices, and implementation details may be finalized in IMPLEMENTATION_PLAN.md.
 
 ---
 
-## 11.2 Application Platform
+## 11.2 Platform and Trust Boundary
 
-### TC-001 — Progressive Web Application
+The application shall be browser-accessible, installable as a PWA where supported, mobile-first, responsive across smartphones, tablets, laptops, and desktops, and online-only in Phase 1. Installation shall be optional, and no separate native Android or iOS application is required.
 
-AttendSense Phase 1 shall be developed as a **Progressive Web Application (PWA)** using Next.js, React, and TypeScript.
+Trusted server or application logic shall handle authentication verification, authorization, user-data isolation, protected persistence, upload-processing coordination, trusted validation, confirmed-data replacement, database operations, and other security-sensitive operations.
 
-The application shall:
-
-- Be accessible through supported web browsers.
-- Be installable on supported devices and browsers.
-- Provide an app-like experience when launched as an installed PWA.
-- Provide a responsive interface suitable for mobile and desktop environments.
-
-A separate native Android or iOS application shall not be required for Phase 1.
+Client input is not inherently trusted. Client-side validation may improve UX, but integrity-critical validation shall occur in trusted logic where required. The architecture shall not require a separate backend service unless later implementation constraints require one.
 
 ---
 
-### TC-002 — Mobile-First Design
+## 11.3 Authentication and Persistence Technology
 
-AttendSense shall follow a mobile-first implementation approach.
+Google authentication shall use a stable Google identity association, recognize returning users, support session handling and logout, and require reauthentication when needed. No username/password or OTP authentication is required. The compatible authentication library may be selected in IMPLEMENTATION_PLAN.md.
 
-The application shall support responsive operation across:
+PostgreSQL and Prisma shall support, where applicable, the AttendSense account, Google identity association, academic context, latest confirmed course-aware attendance dataset, confirmed timetable, confirmed Academic Calendar, required course or batch mappings, review or validation metadata, ownership metadata, and other minimal Phase 1 metadata genuinely required.
 
-- Smartphones.
-- Tablets.
-- Laptops.
-- Desktop computers.
-
-The primary attendance workflow shall remain fully usable on smartphones.
+The database shall not be modeled primarily around overall attendance values or unnecessary historical version tracking.
 
 ---
 
-## 11.3 Frontend Technology
+## 11.4 Course-Aware Attendance Architecture
 
-### TC-003 — Next.js and React
+The latest confirmed attendance dataset shall represent course records containing, where applicable:
 
-The AttendSense frontend shall be implemented using:
+- Course code and course name or label.
+- Theory or Practical identity.
+- Conducted, present, and absent values.
+- Calculated course attendance percentage.
+- Calculation eligibility.
+- Review, mapping, and validation state.
+- Ownership and dataset metadata.
 
-- Next.js.
-- React.
-- TypeScript.
+Where a valid structured course code exists, it shall be the authoritative primary identity. Minor OCR course-name differences shall not override it. Theory and Practical records with separate official codes shall remain separate. Code-less or ambiguous records may be retained for review or display but shall not silently become calculation-eligible.
 
-The application shall use the modern Next.js application architecture selected during implementation planning.
-
-The exact:
-
-- Folder structure.
-- Component structure.
-- Rendering strategy.
-- Route organization.
-- State-management approach.
-
-shall be defined in the Implementation Plan.
+Overall attendance, Reported Total, and No Attendance information may be retained only for supporting context, normalization, validation, or traceability. They are not the primary Phase 1 calculation model.
 
 ---
 
-### TC-004 — TypeScript
+## 11.5 Attendance Input and Extraction Architecture
 
-TypeScript shall be used as the primary programming language for the AttendSense application.
+Attendance input shall support PDF, one image, and multiple images. Multiple images belonging to one submission may be processed together, and duplicated or overlapping information shall not be counted more than once where reasonably possible.
 
-Type safety shall be used where practical for:
+Attendance PDF and image processing shall attempt to obtain, where available, course code, course name or label, conducted, present, absent, Theory or Practical identity, reported course percentage, and supporting overall or non-attendance values where useful.
 
-- Overall attendance data.
-- User data.
-- Academic configuration.
-- Timetable and academic-calendar data.
-- Calculation inputs.
-- Calculation outputs.
-- Validation results.
-- Server-client data structures.
+Where machine-readable PDF text or structure is reliable, direct extraction may be preferred over unnecessary OCR. Course-wise content shall be located by content or structure rather than a permanently hard-coded page number or sample layout.
 
-Core attendance calculation logic shall use clearly defined types.
+Image/OCR/document-vision processing shall support the same course-aware structure and multiple-image handling. No OCR or vision system shall be assumed perfectly accurate. Extraction output shall complete extraction, structuring or normalization, validation, student review/edit, confirmation, and persistence before it can support attendance analysis.
+
+Exact supported extensions, size limits, image-count limits, and production extraction libraries or services may be finalized in IMPLEMENTATION_PLAN.md.
 
 ---
 
-### TC-005 — Tailwind CSS
+## 11.6 Extraction and Calculation Separation
 
-Tailwind CSS shall be used as the primary styling technology for the Phase 1 user interface.
+The deterministic calculation engine shall consume confirmed structured course-aware data. It shall not depend directly on original PDF or image layout, an OCR vendor, or a PDF parser.
 
-The implementation shall use reusable and consistent styling patterns to support the UI/UX requirements defined in Section 8.
+Document-extraction technology shall not determine Safe Bunk eligibility or result, Recovery result, Future Simulator result, or authoritative threshold compliance. Those outcomes belong to deterministic TypeScript calculation logic.
 
-The detailed design system, including:
+Core technical feasibility has been validated on the tested samples and scenarios for attendance PDF extraction, attendance image extraction, multiple-image attendance handling, timetable screenshot or image extraction, Academic Calendar PDF extraction, course-code matching, Theory or Practical separation, batch and calendar filtering, deterministic bunk calculation, and end-to-end core calculation integration.
 
-- Colors.
-- Typography.
-- Spacing.
-- Component variants.
-- Responsive breakpoints.
-- Animation usage.
-
-shall be finalized during UI implementation planning.
+This validation does not imply universal extraction perfection or production readiness.
 
 ---
 
-## 11.4 Backend Architecture
+## 11.7 Deterministic Calculation Engine
 
-### TC-006 — Next.js Server-Side Architecture
+The deterministic TypeScript engine shall support course-aware confirmed attendance, Safe Bunk, Attendance Recovery, Future Attendance Simulator, the fixed 75% threshold, course-code matching, Theory or Practical separation, applicable batch, calendar, and session filtering, current-time boundaries, multiple selected Safe Bunk skips, independent multiple-course calculations, continuous multi-period session handling, precision rules, and missing, unmatched, or review states.
 
-AttendSense shall use the server-side capabilities provided by Next.js for Phase 1 backend functionality.
+Threshold decisions shall use full internal precision; display rounding shall occur only after calculation. Generative AI or LLM output shall not determine calculation-critical results.
 
-Server-side responsibilities shall include, where applicable:
-
-- Authentication handling and verification.
-- Authorization.
-- Protected data access.
-- Attendance persistence.
-- Attendance-processing coordination.
-- Required trusted validation.
-- Database operations.
-- Secure application operations.
-
-A separate independent backend application shall not be required for Phase 1 unless a technical limitation identified during implementation makes one necessary.
+One confirmed scheduled attendance event shall equal one future attendance occurrence for its matched course. If a practical or laboratory session spans multiple timetable periods but the confirmed timetable identifies it as one continuous session, it shall count as one attendance event. Attendance weight shall not be inferred from session duration.
 
 ---
 
-### TC-007 — Route Handlers
+## 11.8 Student-Uploaded Timetable System
 
-Where HTTP endpoints are required, AttendSense shall use Next.js Route Handlers or the appropriate supported Next.js server-side mechanism.
+AttendSense shall not maintain or automatically assign a timetable from academic configuration. The student shall upload their own timetable as an image or screenshot only.
 
-The exact API/route structure shall be defined in the Implementation Plan.
+The timetable workflow shall be:
 
-The application shall not expose unnecessary public endpoints.
+**Timetable Image/Screenshot**  
+↓  
+**File/Input Validation**  
+↓  
+**Extraction / Structuring**  
+↓  
+**Automatic Validation**  
+↓  
+**Student Review/Edit**  
+↓  
+**Student Confirmation**  
+↓  
+**Persistence**
 
----
+The confirmed timetable shall remain associated with the authenticated account and be reused until explicitly and successfully replaced. Failed or rejected replacement shall preserve the previous timetable.
 
-### TC-008 — Client Trust Limitation
-
-Client-side information shall not be considered inherently trustworthy.
-
-Client-side validation may improve usability and provide immediate feedback, but security-sensitive and data-integrity-sensitive operations shall be validated through trusted server-side logic where required.
-
----
-
-## 11.5 Authentication Technology
-
-### TC-009 — Google Authentication
-
-Phase 1 shall use **Sign in with Google** as the user authentication method.
-
-The authentication implementation shall support:
-
-- Google identity verification.
-- First-time AttendSense account creation.
-- Returning-user recognition.
-- Secure authenticated sessions.
-- Logout.
-- Reauthentication after session loss or expiration.
-
-AttendSense shall not implement a separate username/password authentication system during Phase 1.
+Confirmed timetable data shall preserve where applicable day or date, start and end time, course or session identity, course code, Theory or Practical identity, batch applicability, continuous multi-period structure, and mapping or review state. Timetable extraction shall not hard-code one layout and shall remain separable from deterministic calculation logic.
 
 ---
 
-### TC-010 — Authentication Integration
+## 11.9 Student-Uploaded Academic Calendar System
 
-A suitable authentication implementation compatible with Next.js and Google authentication shall be used.
+AttendSense shall not maintain or automatically assign an Academic Calendar from academic configuration. The student shall upload the official SPCE Academic Calendar as a PDF only.
 
-The exact authentication library and configuration shall be finalized in the Implementation Plan.
+The calendar workflow shall be:
 
-The selected solution shall satisfy the authentication and security requirements defined elsewhere in this PRD.
+**Official SPCE Academic Calendar PDF**  
+↓  
+**File/Input Validation**  
+↓  
+**Extraction / Structuring**  
+↓  
+**Automatic Validation**  
+↓  
+**Student Review/Edit**  
+↓  
+**Student Confirmation**  
+↓  
+**Persistence**
 
----
+The confirmed calendar shall remain associated with the authenticated account and be reused until explicitly and successfully replaced. Failed or rejected replacement shall preserve the previous calendar.
 
-### TC-011 — Google Identity Association
-
-Each AttendSense account shall be associated with the corresponding verified Google identity.
-
-A stable identifier obtained through the Google authentication process shall be used to recognize the same user during future authentication attempts.
-
----
-
-## 11.6 Database Technology
-
-### TC-012 — PostgreSQL
-
-PostgreSQL shall be used as the persistent relational database for AttendSense Phase 1.
-
-The database shall store persistent information required by the application, including where applicable:
-
-- AttendSense user account information.
-- Google identity association.
-- Academic configuration.
-- Latest successfully validated and confirmed normalized attendance dataset.
-- Other application metadata required for Phase 1 functionality.
-
-The exact PostgreSQL hosting provider shall be selected during the Implementation Plan.
+Confirmed calendar data shall preserve Teaching, Teaching Continues, Non-Teaching, Unknown or Requires Review, dates or date ranges, event information required for interpretation, and scope or applicability metadata. Teaching and Teaching Continues allow applicable timetable sessions; confirmed Non-Teaching, public holiday, or vacation periods suppress them. Unknown or ambiguous states shall not silently suppress sessions.
 
 ---
 
-### TC-013 — Prisma ORM
+## 11.10 Future Session Generation and Current-Time Rule
 
-Prisma ORM shall be used as the primary application data-access layer between the AttendSense application and PostgreSQL.
+Schedule-aware calculations shall generate applicable sessions from the confirmed student-uploaded timetable, confirmed student-uploaded Academic Calendar, course-code mapping, Theory or Practical identity, batch applicability, relevant date or range, and current date or time where required.
 
-Prisma shall be used for:
+Generated sessions shall preserve enough identity to match the correct confirmed course record. Batch mismatches are not applicable; unknown batch applicability requires conservative review. Code-less or unmatched sessions shall not affect calculation without a confirmed mapping.
 
-- Database schema representation.
-- Application-level database access.
-- Relationships.
-- Database migrations.
-- Type-safe data operations where applicable.
+For current-day Safe Bunk, a class is selectable only when:
 
-The exact Prisma models and relationships shall be defined in the Implementation Plan.
+**current_time < class_start_time**
+
+When current_time is at or after class_start_time, the class shall not be selectable for bunk planning.
 
 ---
 
-## 11.7 Attendance Data Architecture
+## 11.11 Safe Bunk, Recovery, and Simulator Technical Models
 
-### TC-014 — Normalized Overall Attendance Model
+Safe Bunk shall be today-only and generate today's remaining applicable sessions. Only explicitly selected bunk classes shall affect projection. Unselected displayed classes shall not be assumed attended and shall not modify projected conducted, present, or absent values.
 
-The database and application architecture shall support the normalized overall attendance representation defined by this PRD.
+For one selected matched skipped occurrence, conducted increases by one, present remains unchanged, and absent increases by one. Multiple skips of one course aggregate for that course; different courses are calculated independently. A plan is SAFE only when every affected matched course remains at or above 75%. Overall attendance may be supporting context only.
 
-The latest confirmed attendance dataset shall be capable of representing the information required for Phase 1 attendance analysis, including:
+Attendance Recovery shall be course-specific. For a course below 75%, it shall determine the minimum additional future attended sessions needed to satisfy (P + x) / (C + x) at or above 0.75, where P is confirmed present, C is confirmed conducted, and x is additional attended sessions. Each projected attended session increases conducted and present by one and leaves absent unchanged. If confirmed coverage cannot map all required sessions, the system shall return the mathematical count without inventing future sessions.
 
-- **Overall Present Slots.**
-- **Overall Effective Total Slots.**
-- Displayed or Reported Total Slots, where required for normalization or traceability.
-- No Attendance or equivalent non-attendance slots, where applicable.
-- Calculated Overall Attendance Percentage.
-- Relevant validation metadata.
-- Information required to associate the dataset with the authenticated student.
-- Information required to identify and manage the latest confirmed attendance dataset.
-
-Individual subject-wise attendance percentages shall not form the calculation basis of the Phase 1 attendance dataset.
-
-Course-level or other extracted information may be represented where genuinely required for document interpretation, validation, or traceability, but the attendance calculation engine shall not depend on subject-wise attendance percentages.
-
-The calculation engine shall not depend directly on the original PDF or image layout.
+Future Simulator shall operate on confirmed course-aware attendance. A simulated ATTEND increases conducted and present by one; BUNK/MISS increases conducted and absent by one. Scenarios shall be applied independently to affected course records, preserve Theory or Practical separation, remain hypothetical, and not modify confirmed attendance.
 
 ---
 
-### TC-015 — Latest Confirmed Attendance Dataset
+## 11.12 Confirmed-Data Replacement and Temporary Source Files
 
-Phase 1 shall persist the student's latest successfully validated and confirmed normalized attendance dataset.
+The technical architecture shall support independent persistence and safe replacement of attendance, timetable, and Academic Calendar data.
 
-The latest confirmed attendance dataset shall remain associated with the student's account across:
+Each existing confirmed input shall remain active until its replacement completes input or upload, validation, extraction or structuring, automatic validation, student review/edit, confirmation, and persistence. Failure, rejection, or save failure shall preserve previous confirmed data.
 
-- Browser sessions.
-- Logout/login cycles.
-- PWA reopening.
-- PWA reinstallation followed by reauthentication.
-- Supported device changes followed by authentication with the same associated Google identity.
-
-A newly submitted attendance dataset shall replace the existing confirmed dataset only after successful:
-
-1. File/input validation.
-2. Extraction.
-3. Normalization.
-4. Automatic validation.
-5. Student review.
-6. Student confirmation.
-7. Persistence.
-
-If any required stage fails, the previously confirmed attendance dataset shall remain unchanged.
-
-Hypothetical Safe Bunk, Attendance Recovery, or Future Attendance Simulator results shall not replace or modify the latest confirmed attendance dataset.
+Attendance PDFs or images, timetable images or screenshots, and Academic Calendar PDFs shall be temporary source inputs. Original documents need not be permanently retained once confirmed structured data is persisted and a source file is no longer needed. Failed or rejected inputs should be cleaned after they are no longer required for active processing or error handling. Exact storage mechanisms belong in IMPLEMENTATION_PLAN.md.
 
 ---
 
-## 11.8 Attendance File Input
+## 11.13 PWA, Share Target, and Online Operation
 
-### TC-016 — Supported Attendance Input
+The PWA shall include a manifest, app name and icons, display configuration, required PWA metadata, standalone app-like experience, optional installation, and browser operation while remaining online-only in Phase 1.
 
-Phase 1 shall accept attendance data through:
+Reinstalling the PWA shall not create duplicate accounts, academic configuration, confirmed attendance, confirmed timetables, or confirmed Academic Calendars.
 
-- Supported PDF files.
-- Supported image files.
+PWA share-target functionality shall be conditional and limited to supported attendance files. It depends on installation, registration, OS and browser or PWA support, supported file registration, successful file reception, authentication interaction, and implementation or platform validation.
 
-Multiple image files shall be supported within one attendance submission where necessary.
+Shared attendance input shall enter the same attendance-processing pipeline and shall not bypass authentication, validation, extraction, normalization, review/edit, confirmation, persistence, or temporary-file cleanup. It shall not be extended to timetable or Academic Calendar input.
 
-Students shall not be required to specify the original attendance-system source or layout of the PDF or image.
-
-Exact:
-
-- Supported image extensions.
-- Maximum file size.
-- Maximum PDF size.
-- Maximum number of images.
-
-shall be finalized during implementation planning and testing.
+Active internet access is required for Phase 1 operations including authentication, protected server operations, persisted data access, attendance, timetable, and Academic Calendar upload or extraction, database operations, and any selected external processing service.
 
 ---
 
-### TC-017 — Temporary Source Files
+## 11.14 External Services and Phase 1 Boundaries
 
-Original attendance PDF and image files shall be treated as **temporary processing inputs**.
+Controlled external dependency categories may include Google authentication, PostgreSQL hosting, document processing where required, and deployment. Any selected service shall satisfy security/privacy, deployment, maintainability, reliability, and cost requirements without locking an unapproved provider in this PRD.
 
-The architecture shall not require permanent storage of original attendance files for normal Phase 1 operation.
+Course attendance values may be displayed as confirmed-data and analysis context, but there shall be no separate standalone calculation feature for current attendance.
 
-The required lifecycle shall be:
-
-**PDF/Image Received**
-
-↓
-
-**File Validation**
-
-↓
-
-**Attendance Extraction**
-
-↓
-
-**Normalization**
-
-↓
-
-**Automatic Validation**
-
-↓
-
-**Student Review**
-
-↓
-
-**Student Confirmation**
-
-↓
-
-**Normalized Attendance Successfully Persisted**
-
-↓
-
-**Original Source File No Longer Required**
-
-↓
-
-**Temporary Source File Removed**
-
-If processing fails, validation fails, or the student rejects the interpreted dataset, temporary source files shall also be removed after they are no longer required for the active processing or error-handling workflow.
-
-The exact temporary file-processing and storage mechanism shall be selected during the Implementation Plan.
-
----
-
-## 11.9 PDF Attendance Processing
-
-### TC-018 — PDF Extraction Strategy
-
-AttendSense shall support extraction of the attendance information required to determine the student's normalized overall attendance dataset from supported PDF files.
-
-Where a PDF contains usable machine-readable attendance information, direct PDF text or structured-data extraction shall be preferred over unnecessary OCR.
-
-The processing pipeline shall attempt to identify relevant information such as:
-
-- Overall Present Slots.
-- Displayed or Reported Total Slots, where available.
-- No Attendance or equivalent non-attendance slots, where applicable.
-- Reported Overall Attendance Percentage, where available for validation.
-- Other information required to reliably determine Overall Effective Total Slots.
-
-Course-level information may be extracted where useful for document interpretation, validation, or traceability, but individual subject-wise attendance percentages shall not form the basis of Phase 1 attendance calculations.
-
-The PDF processor shall ultimately produce normalized attendance information compatible with the common validation pipeline.
-
----
-
-### TC-019 — PDF Processing Technology
-
-The exact PDF parsing library or processing mechanism shall be selected during the Implementation Plan.
-
-Selection shall consider:
-
-- Compatibility with expected PDF structures.
-- Extraction reliability.
-- Numerical extraction accuracy.
-- Next.js compatibility.
-- Deployment compatibility.
-- Security and privacy.
-- Performance.
-- Maintainability.
-- Cost.
-
-A PDF-processing failure shall not result in invented or assumed attendance values.
-
----
-
-## 11.10 Image and OCR Processing
-
-### TC-020 — Image Attendance Extraction
-
-AttendSense shall use an appropriate OCR, document-vision, or equivalent image-processing mechanism to obtain the information required to determine the student's normalized overall attendance dataset from uploaded images.
-
-The processing mechanism shall attempt to identify relevant information such as:
-
-- Overall Present Slots.
-- Displayed or Reported Total Slots, where available.
-- No Attendance or equivalent non-attendance slots, where applicable.
-- Reported Overall Attendance Percentage, where available for validation.
-- Other information required to reliably determine and validate Overall Effective Total Slots.
-
-Multiple uploaded images belonging to the same attendance submission shall be capable of being processed together where required.
-
-The processing workflow shall detect or prevent duplicated attendance information from being counted more than once where reasonably possible.
-
----
-
-### TC-021 — OCR/Vision Technology Selection
-
-The exact OCR or vision technology shall be selected during the Implementation Plan after technical evaluation.
-
-Candidate solutions shall be evaluated using representative attendance images.
-
-Evaluation shall consider:
-
-1. Overall extraction reliability.
-2. Numerical recognition accuracy.
-3. Ability to identify Overall Present Slots.
-4. Ability to identify displayed/reported Total Slots.
-5. Ability to identify No Attendance or equivalent values where present.
-6. Ability to identify reported overall attendance percentages where useful for validation.
-7. Multiple-image handling.
-8. Duplicate-information handling.
-9. Security and privacy.
-10. Processing speed.
-11. Integration complexity.
-12. Usage limits.
-13. Cost.
-14. Vercel/Next.js deployment compatibility.
-
-Course names, course codes, theory/practical information, or other document content may also be evaluated where useful for document interpretation or validation, but they shall not be mandatory calculation inputs unless required by the final supported attendance-document structure.
-
-No OCR or vision system shall be assumed to provide perfectly accurate data.
-
-Its output shall therefore remain subject to AttendSense normalization, automatic validation, student review, and student confirmation.
-
----
-
-### TC-022 — Extraction Responsibility Boundary
-
-The PDF/OCR/vision processing system shall be responsible for extracting and interpreting attendance information required by the approved attendance-processing workflow.
-
-It shall not independently determine:
-
-- Safe Bunk eligibility or results.
-- Attendance Recovery requirements.
-- Future Attendance Simulator results.
-- 75% threshold compliance used for authoritative application decisions.
-
-These responsibilities shall remain with the AttendSense deterministic calculation and validation logic.
-
----
-
-## 11.11 Attendance Processing Pipeline
-
-### TC-023 — Standard Processing Pipeline
-
-Regardless of input format, AttendSense shall follow the approved attendance-processing pipeline:
-
-**PDF / Image(s)**
-
-↓
-
-**File Validation**
-
-↓
-
-**Attendance Extraction**
-
-↓
-
-**Normalization**
-
-↓
-
-**Automatic Validation**
-
-↓
-
-**Student Review**
-
-↓
-
-**Student Confirmation**
-
-↓
-
-**Persistence of Latest Confirmed Attendance Dataset**
-
-↓
-
-**Attendance Analysis**
-
-Raw extraction results shall not bypass the required normalization, validation, review, and confirmation stages.
-
----
-
-### TC-024 — Input-Independent Calculation Engine
-
-The attendance calculation engine shall remain independent of the attendance extraction mechanism.
-
-The same normalized overall attendance structure shall be provided to the calculation engine regardless of whether the original attendance information came from:
-
-- PDF, or
-- Image.
-
-The calculation engine shall operate on confirmed overall attendance information rather than depending on the structure or layout of the original attendance document.
-
-This separation shall allow the extraction implementation to be modified without redesigning the attendance calculation engine.
-
----
-
-## 11.12 Attendance Calculation Technology
-
-### TC-025 — TypeScript Calculation Engine
-
-The core attendance calculation engine shall be implemented using deterministic TypeScript logic.
-
-The engine shall implement the formulas, attendance-slot rules, eligibility conditions, and boundary rules defined in Section 6.
-
-The engine shall support:
-
-- Determination of confirmed overall attendance from Overall Present Slots and Overall Effective Total Slots.
-- Safe Bunk calculation.
-- Attendance Recovery calculation.
-- Future Attendance simulation.
-- Fixed 75% threshold evaluation.
-- Lecture and laboratory attendance-slot weighting.
-
-The defined Phase 1 attendance-slot weights shall remain:
-
-- **Lecture = 1 attendance slot**
-- **Laboratory session = 2 attendance slots**
-
-Confirmed overall attendance may be calculated and displayed as supporting application context.
-
-**Current Attendance Calculation shall not exist as a separate calculator or standalone Phase 1 analysis feature.**
-
----
-
-### TC-026 — No Generative AI for Calculations
-
-Generative AI shall not be used to determine:
-
-- Confirmed overall attendance percentages.
-- Safe Bunk eligibility or results.
-- Attendance Recovery requirements.
-- Future Attendance Simulator percentages or results.
-- 75% threshold compliance.
-- Attendance-slot mathematical effects.
-
-Attendance calculations shall remain deterministic and mathematically reproducible.
-
----
-
-### TC-027 — Calculation Isolation
-
-Core attendance formulas shall be implemented separately from:
-
-- UI components.
-- Document extraction.
-- Database persistence.
-- Authentication.
-- Timetable presentation.
-
-The calculation engine shall be independently testable using known numerical inputs and expected outputs.
-
----
-
-## 11.13 Timetable System
-
-### TC-028 — Predefined Timetable Data
-
-AttendSense shall maintain the timetable information required for schedule-aware future attendance analysis.
-
-Students shall not be required to manually create their complete timetable.
-
-The appropriate predefined timetable shall be associated with the student's academic configuration.
-
-The timetable shall provide sufficient information to determine applicable future:
-
-- Lecture occurrences.
-- Laboratory-session occurrences.
-- Class dates.
-- Class times where required.
-- Course information required for student-facing schedule presentation.
-- Lecture/laboratory classification required for attendance-slot weighting.
-
----
-
-### TC-029 — Timetable Maintainability
-
-Timetable data shall be maintained separately from core attendance formulas.
-
-Changing timetable information shall not require modification of the mathematical attendance calculation engine.
-
-The exact timetable data-storage and administration mechanism shall be defined in the Implementation Plan.
-
----
-
-## 11.14 Academic Calendar System
-
-### TC-030 — Predefined Academic Calendar
-
-AttendSense shall maintain the academic-calendar information required for schedule-aware attendance analysis.
-
-The calendar shall provide the information necessary to distinguish:
-
-- Applicable academic working days.
-- Holidays.
-- Other defined non-working academic days.
-
-Timetable occurrences falling on recognized holidays or other non-working academic days shall not be treated as applicable future attendance opportunities.
-
----
-
-### TC-031 — Calendar Maintainability
-
-Academic-calendar information shall be maintained separately from core attendance calculation logic.
-
-Updating academic-calendar information shall not require rewriting attendance formulas.
-
-The exact calendar data-storage and update mechanism shall be defined in the Implementation Plan.
-
----
-
-## 11.15 Future Class Generation
-
-### TC-032 — Timetable and Calendar Integration
-
-AttendSense shall generate applicable future lecture and laboratory occurrences by combining:
-
-- The student's associated predefined timetable.
-- The applicable academic calendar.
-- The relevant analysis date or date range.
-
-Timetable occurrences falling on holidays or other defined non-working academic days shall be excluded.
-
-Each generated future class shall contain sufficient information for the applicable attendance-analysis feature, including its classification as:
-
-- Lecture, or
-- Laboratory session.
-
-For the current date, future-class generation shall exclude timetable occurrences whose scheduled start time has already passed.
-
----
-
-### TC-033 — Attendance Slot Association
-
-Each applicable future class shall be associated with the defined Phase 1 attendance-slot weight:
-
-- **Lecture = 1 attendance slot**
-- **Laboratory session = 2 attendance slots**
-
-Future class occurrences shall represent future attendance decisions applied to the student's overall confirmed attendance values.
-
-They shall not require separate subject-wise attendance percentages to perform Phase 1 attendance calculations.
-
-If AttendSense cannot reliably determine whether a future timetable occurrence represents a lecture or laboratory session, the affected schedule-aware analysis shall not silently assign an attendance-slot weight.
-
----
-
-## 11.16 PWA Technical Requirements
-
-### TC-034 — PWA Configuration
-
-AttendSense shall include the technical configuration required to operate as a Progressive Web Application on supported platforms.
-
-This shall include appropriate:
-
-- Web application manifest.
-- Application name.
-- Application icons.
-- Display configuration.
-- Required PWA metadata.
-
-The exact PWA implementation details shall be defined in the Implementation Plan.
-
----
-
-### TC-035 — Standalone Experience
-
-When installed on a supported device, AttendSense shall provide an appropriate standalone app-like experience.
-
-PWA installation shall not create:
-
-- A separate AttendSense account.
-- Duplicate academic configuration.
-- Duplicate confirmed attendance data.
-
----
-
-### TC-036 — Browser Operation
-
-Core AttendSense functionality shall remain available through supported web browsers without requiring PWA installation.
-
-PWA installation shall remain optional.
-
----
-
-### TC-037 — Online-Only Phase 1
-
-AttendSense Phase 1 shall require an active internet connection for normal application operation.
-
-Offline application functionality is outside the scope of Phase 1.
-
-Operations requiring network connectivity include, where applicable:
-
-- Google authentication.
-- Server-side application operations.
-- Persisted user-data access.
-- Attendance upload.
-- Attendance extraction.
-- Database access.
-- External processing services.
-- Retrieval of server-maintained application data.
-
-If network connectivity is unavailable, AttendSense shall handle the condition gracefully and shall not produce misleading attendance results from incomplete operations.
-
----
-
-## 11.17 PWA Share-Target Technology
-
-### TC-038 — Share-Target Support
-
-AttendSense shall implement PWA share-target functionality for supported attendance files where the selected platform and browser provide the required capability.
-
-Where successfully supported and registered, an installed AttendSense PWA may appear as a destination in the operating system's share interface for supported attendance files.
-
-Share-target functionality shall remain subject to:
-
-- PWA installation.
-- Share-target registration.
-- Operating-system support.
-- Browser/PWA support.
-- Correct supported file-type registration.
-- Successful file reception.
-- Authentication interaction.
-- Technical validation on supported Phase 1 environments.
-
-AttendSense shall not assume or guarantee share-sheet availability on every device, operating system, or browser.
-
----
-
-### TC-039 — Shared File Processing
-
-Attendance files received through PWA share-target functionality shall enter the same attendance-processing architecture as files selected through the in-application upload workflow.
-
-A shared file shall not bypass:
-
-- Authentication.
-- File validation.
-- Attendance extraction.
-- Normalization.
-- Automatic validation.
-- Student review.
-- Student confirmation.
-- Persistence rules.
-- Temporary-file retention and cleanup requirements.
-
-If a shared file is received without a valid authenticated session, protected processing shall not proceed until authentication is completed.
-
-Temporary retention through authentication may be implemented only where it can be performed safely and reliably.
-
-If the shared file cannot be safely retained through authentication, the student shall be required to provide the file again.
-
----
-
-## 11.18 External Services
-
-### TC-040 — Controlled External Dependencies
-
-AttendSense shall avoid unnecessary external service dependencies.
-
-External services may be used where required for approved functionality, including:
-
-- Google authentication.
-- PostgreSQL hosting.
-- Attendance document processing.
-- Application deployment.
-
-Any external service introduced during implementation shall satisfy the applicable:
-
-- Security requirements.
-- Privacy requirements.
-- Reliability requirements.
-- Deployment requirements.
-- Cost constraints.
-
-External document-processing services shall receive only the information reasonably required for the intended processing operation.
-
----
-
-### TC-041 — External Processing Failure
-
-Failure of an external attendance-processing service shall be treated as a processing failure.
-
-Incomplete, uncertain, or unverified extraction output resulting from such a failure shall not become confirmed attendance data or be passed to the authoritative attendance-analysis workflow.
-
-The student's previously confirmed attendance dataset shall remain unaffected.
-
----
-
-## 11.19 Deployment
-
-### TC-042 — Vercel Deployment
-
-AttendSense Phase 1 shall use **Vercel** as the primary application deployment platform.
-
-The implementation architecture shall remain compatible with the deployment environment and limitations applicable to the selected Vercel configuration.
-
-Production deployment shall use HTTPS.
-
----
-
-### TC-043 — Environment Configuration
-
-Environment-specific configuration shall be maintained separately from publicly committed source code.
-
-The project shall support appropriate configuration for:
-
-- Local development.
-- Testing.
-- Production.
-
-Sensitive credentials and secrets shall be managed through secure environment configuration.
-
----
-
-## 11.20 Version Control and Repository
-
-### TC-044 — Git Version Control
-
-AttendSense source code shall be maintained using **Git**.
-
-Development changes shall be tracked through version control.
-
----
-
-### TC-045 — GitHub Repository
-
-The AttendSense project shall use **GitHub** as its primary source-code repository.
-
-The repository shall contain appropriate project documentation alongside the implementation.
-
-Sensitive environment variables, credentials, authentication secrets, database credentials, or other private configuration shall not be committed to the public repository.
-
----
-
-## 11.21 Technology Decisions Deferred to Implementation Plan
-
-The following implementation decisions are intentionally not fixed by the PRD and shall be evaluated during the Implementation Plan:
-
-- Exact Google authentication library.
-- PostgreSQL hosting provider.
-- PDF parsing library.
-- OCR/vision technology.
-- Temporary upload-processing mechanism.
-- Temporary file-storage mechanism, if required.
-- Validation library.
-- UI component library, if one is required.
-- State-management approach, if additional state management is required.
-- Testing framework and testing tools.
-- Exact PWA implementation mechanism.
-- PWA share-target implementation details.
-- Logging and monitoring tools.
-- Detailed Next.js project structure.
-- Database schema and Prisma models.
-- Exact server route structure.
-
-These decisions shall be made according to the approved product requirements rather than changing the product requirements to fit a preferred technology.
-
----
-
-## 11.22 Technology Selection Priorities
-
-When selecting technologies not explicitly fixed by this PRD, the following priorities shall be considered:
-
-1. **Attendance calculation correctness**
-2. **Attendance extraction reliability**
-3. **Security and privacy**
-4. **Compatibility with the approved technology stack**
-5. **Student usability**
-6. **Maintainability**
-7. **Development feasibility**
-8. **Performance**
-9. **Deployment compatibility**
-10. **Cost**
-
-For attendance extraction specifically, reliable identification of the overall attendance values required by the normalized attendance model shall take priority over convenience of implementation.
-
----
-
-## 11.23 Approved Phase 1 Technical Foundation
-
-The approved Phase 1 technical foundation is:
-
-**PWA**
-
-↓
-
-**Next.js + React + TypeScript**
-
-↓
-
-**Tailwind CSS**
-
-↓
-
-**Next.js Server-Side Capabilities**
-
-↓
-
-**Sign in with Google**
-
-↓
-
-**PostgreSQL + Prisma ORM**
-
-↓
-
-**PDF/Image Attendance Processing**
-
-↓
-
-**Overall Attendance Extraction + Normalization + Automatic Validation**
-
-↓
-
-**Student Review + Confirmation**
-
-↓
-
-**Latest Confirmed Attendance Dataset**
-
-↓
-
-**Predefined Timetable + Academic Calendar**
-
-↓
-
-**Deterministic TypeScript Attendance Analysis**
-
-↓
-
-**Safe Bunk / Attendance Recovery / Future Attendance Simulator**
-
-↓
-
-**Vercel Deployment**
-
-↓
-
-**Git + GitHub**
-
-The exact document-extraction technologies shall be selected during implementation planning after technical evaluation.
-
-Technology choices made during implementation shall support this architecture and shall not contradict the approved requirements defined in this PRD.
+This section shall not introduce a native mobile application, offline operation, ERP integration, automatic attendance synchronization, admin or faculty portal, multi-college architecture, notifications, historical analytics, AI or LLM attendance decision-making, or new calculators.
 
 # 12. Future Scope (Post Phase 1)
 
-This section defines features intentionally excluded from Phase 1 but considered valuable for future versions of AttendSense.
-
-Items listed here are **not implementation requirements** for the initial release and shall not influence the Phase 1 architecture beyond maintaining reasonable extensibility.
-
----
-
 ## 12.1 Purpose
 
-Phase 1 focuses on delivering a reliable attendance-analysis application built around:
+Phase 1 already provides secure Google authentication, student-provided attendance input, course-aware extraction and confirmation, student-uploaded timetable and official Academic Calendar workflows, deterministic course-aware attendance planning, Safe Bunk, Attendance Recovery, Future Attendance Simulator, and confirmed-data persistence.
 
-- Secure Google authentication
-- Attendance upload (PDF/Image)
-- Automatic extraction and validation
-- Student confirmation
-- Safe Bunk Calculator
-- Attendance Recovery Calculator
-- Future Attendance Simulator
-
-Future versions may expand the product without changing these core workflows.
+Section 12 describes possible post-Phase-1 expansions. These possibilities shall extend, not replace, the approved Phase 1 principles.
 
 ---
 
 ## 12.2 Institutional Integration
 
-A future version may support direct integration with college or university attendance systems.
+Phase 1 has no ERP or institutional API integration.
 
-Potential capabilities include:
+Future versions may support direct college or university attendance-system integration, automatic official attendance synchronization, secure institutional data import, institutional authentication where appropriate, and broader institutional integration.
 
-- Automatic attendance synchronization
-- Official attendance import
-- Secure institutional login
-- Department-specific attendance formats
-- Multi-institution support
-
-**Status:** Out of Scope for Phase 1
+Multi-institution expansion remains future scope.
 
 ---
 
 ## 12.3 Attendance History
 
-Instead of maintaining only the latest confirmed attendance dataset, future versions may provide historical tracking.
+Phase 1 uses the latest confirmed attendance dataset as the active attendance base and does not require full historical dataset storage.
 
-Possible features:
-
-- Previous attendance uploads
-- Version history
-- Weekly attendance trends
-- Monthly attendance reports
-- Attendance improvement analytics
-
-**Status:** Out of Scope for Phase 1
+Future versions may support attendance upload history, dataset or version history, weekly or monthly trends, historical analytics, and attendance progress over time.
 
 ---
 
 ## 12.4 Smart Notifications
 
-Future versions may provide intelligent reminders such as:
+Notifications are outside Phase 1.
 
-- Low attendance warning
-- Recovery reminders
-- Upcoming risky attendance situations
-- Attendance milestone notifications
-
-Notifications may be delivered through:
-
-- Push notifications
-- Email
-- In-app reminders
-
-**Status:** Out of Scope for Phase 1
+Future versions may support low-attendance warnings, recovery reminders, upcoming attendance-risk reminders, useful attendance milestones, and push, email, or in-app notifications.
 
 ---
 
-## 12.5 Subject-Level Analytics
+## 12.5 Advanced Attendance Analytics
 
-Phase 1 intentionally performs calculations using **overall attendance only**.
+Course-aware calculations and Theory/Practical separation where official course codes differ already exist in Phase 1. Supporting overall attendance may be shown where useful, but it is not the primary calculation basis.
 
-Future versions may introduce deeper analytics including:
-
-- Subject-wise attendance dashboards
-- Lecture vs Lab analysis
-- Department-wise statistics
-- Attendance heatmaps
-- Performance trends
-
-These analytics shall remain optional and independent from the Phase 1 calculation model.
-
-**Status:** Out of Scope for Phase 1
+Future versions may add deeper analytical capabilities such as historical course-attendance trends, heatmaps, comparative trends over time, advanced visual analytics, semester-level trend dashboards, and richer insights derived from historical confirmed data.
 
 ---
 
-## 12.6 Multi-Semester Support
+## 12.6 Multi-Semester Historical Support
 
-Future versions may support:
+Phase 1 supports students who belong to different SPCE semesters within their current active academic context.
 
-- Multiple semesters
-- Semester switching
-- Archived semester records
-- Cross-semester attendance comparison
-
-Phase 1 stores only the latest confirmed attendance dataset for the active academic configuration.
-
-**Status:** Out of Scope for Phase 1
+Future multi-semester functionality means one student retaining, switching between, or comparing multiple historical semester datasets. Possible future features include multiple saved semesters, semester switching, archived semester records, and cross-semester comparisons.
 
 ---
 
-## 12.7 AI Enhancements
+## 12.7 Non-Authoritative AI Enhancements
 
-Artificial intelligence may later assist with non-authoritative tasks such as:
+Phase 1 may already use OCR or document-vision technology for extraction. Future AI enhancements may improve document interpretation, extraction-error detection, natural-language explanation, natural-language attendance queries, or optional personalized insights.
 
-- Improving OCR accuracy
-- Detecting unusual extraction errors
-- Explaining attendance reports
-- Natural-language attendance queries
-- Personalized attendance insights
-
-AI shall **not** replace deterministic attendance calculations or the mandatory student confirmation workflow.
-
-**Status:** Future Enhancement
+AI or LLM shall not replace deterministic calculation logic for attendance percentages, Safe Bunk, Recovery, Future Simulator, or 75% threshold decisions. Mandatory student review/edit/confirmation shall remain required.
 
 ---
 
-## 12.8 Faculty & Administrative Portal
+## 12.8 Faculty and Administrative Portal
 
-A separate institutional portal may later support:
+Phase 1 is student-focused.
 
-- Faculty dashboards
-- Department analytics
-- Batch attendance insights
-- Administrative reporting
-- Institutional attendance visualization
-
-This portal is independent of the student PWA.
-
-**Status:** Future Product Expansion
+Future institutional functionality may include faculty dashboards, department analytics, batch-level analytics, administrative reporting, and institutional attendance visualization. These remain separate from the student Phase 1 PWA.
 
 ---
 
 ## 12.9 Cross-Platform Expansion
 
-Although Phase 1 is delivered as a Progressive Web Application, future versions may include:
+Phase 1 remains PWA-only and online-only.
 
-- Native Android application
-- Native iOS application
-- Desktop application
-- Wearable notification support
-
-The PWA shall remain the primary implementation for Phase 1.
-
-**Status:** Future Expansion
+Future versions may include native Android, native iOS, desktop, or other appropriate platform experiences. These are not required for Phase 1.
 
 ---
 
 ## 12.10 Future Product Vision
 
-The long-term vision of AttendSense is to evolve from a reliable attendance calculator into a comprehensive student attendance planning platform while preserving the principles established in Phase 1:
+Future AttendSense functionality shall build on secure authentication, reliable document extraction, course-aware structured attendance, mandatory student review/edit/confirmation, deterministic calculations, course-code-first matching where available, safe handling of ambiguous data, confirmed-data integrity, privacy-conscious handling, and student-friendly UX.
 
-- Secure authentication
-- Reliable data extraction
-- Mandatory student verification
-- Deterministic attendance calculations
-- Privacy-first data handling
-- Student-friendly user experience
-
-All future features shall extend these principles rather than replacing them.
+Future expansion shall remain realistic and directly related to AttendSense. It shall not introduce social networking, leaderboards, gamification, attendance manipulation, fake or proxy attendance, facial recognition, biometrics, blockchain, payments, advertising, parent monitoring, AI-generated bunk recommendations, or college-management ERP replacement without separate approval.
