@@ -406,7 +406,7 @@ The Future Attendance Simulator shall be available **regardless of the student's
 
 The simulator shall use the student's latest confirmed course-aware attendance dataset as its starting point.
 
-Unlike Safe Bunk, Future Attendance Simulation shall not be restricted only to the remainder of the current week.
+Safe Bunk focuses on today's remaining applicable classes, while Future Attendance Simulation may cover an applicable future simulation period within the available confirmed timetable and Academic Calendar coverage.
 
 The student shall be able to select an applicable future simulation period within the range supported by the available timetable and academic-calendar data.
 
@@ -1163,11 +1163,11 @@ After logout:
 
 ### FR-004 — First-Time Academic Configuration
 
-After first-time authentication, AttendSense shall require the student to complete the academic configuration necessary to associate the correct predefined timetable and academic calendar with the student's account.
+After first-time authentication, AttendSense shall require the student to complete the academic configuration required to retain the student's academic context for attendance planning.
 
 The student shall provide only the required academic information through supported predefined selections wherever possible.
 
-The student shall not be required to manually construct the complete class timetable or academic calendar.
+Academic configuration shall not automatically assign, select, or provide timetable or Academic Calendar data.
 
 ---
 
@@ -1185,11 +1185,7 @@ The saved academic configuration shall be restored after successful returning-us
 
 AttendSense shall allow the student to update supported academic configuration when necessary.
 
-When academic configuration is changed:
-
-- The appropriate predefined timetable shall be reassociated with the student's account.
-- The appropriate academic calendar shall be reassociated where required.
-- Subsequent schedule-aware attendance analysis shall use the updated academic configuration.
+When academic configuration is changed, subsequent schedule-aware attendance analysis shall use the updated academic context where relevant, without automatically replacing the student's confirmed timetable or Academic Calendar.
 
 The system shall validate supported configuration selections before saving them.
 
@@ -1197,71 +1193,33 @@ The system shall validate supported configuration selections before saving them.
 
 ## 5.3 Academic Calendar and Timetable
 
-### FR-007 — Academic Calendar Association
+### FR-007 — Timetable Upload, Confirmation, and Replacement
 
-AttendSense shall maintain the academic calendar required for Phase 1 attendance planning.
+AttendSense shall allow an authenticated student to upload a timetable **image or screenshot only**. The timetable workflow shall perform file/input validation, extraction, structured timetable representation, automatic validation, student review/edit, explicit confirmation, and saving.
 
-The academic calendar shall identify applicable:
+Only a confirmed timetable may be used for attendance calculations. A confirmed timetable shall remain associated with the account and be reused until the student explicitly replaces or updates it.
 
-- Academic working days.
-- Holidays.
-- Other defined non-working academic days.
-
-AttendSense shall use the academic calendar when generating future attendance opportunities.
-
-A timetable occurrence that falls on a recognized holiday or other non-working academic day shall not be treated as an applicable attendance opportunity.
-
-Students shall not be required to manually create or maintain the complete academic calendar.
+A replacement timetable shall not overwrite the previous confirmed timetable unless the replacement successfully completes the complete workflow. A failed or rejected replacement shall leave the previous confirmed timetable active.
 
 ---
 
-### FR-008 — Class Timetable Association
+### FR-008 — Academic Calendar Upload, Confirmation, and Replacement
 
-AttendSense shall maintain predefined class timetables required for Phase 1 attendance analysis.
+AttendSense shall allow an authenticated student to upload the official SPCE Academic Calendar **PDF only**. The Academic Calendar workflow shall perform file/input validation, extraction, structured calendar representation, automatic validation, student review/edit, explicit confirmation, and saving.
 
-The applicable timetable shall be associated with the student's saved academic configuration.
+Only a confirmed Academic Calendar may be used for attendance calculations. A confirmed Academic Calendar shall remain associated with the account and be reused until the student explicitly replaces or updates it.
 
-The timetable shall provide sufficient information to determine:
-
-- Applicable future class occurrences.
-- Class date and time where required.
-- Whether an occurrence represents a lecture or laboratory session.
-- Other schedule information required for student-facing attendance planning.
-
-Students shall not be required to manually create their complete class timetable.
+A replacement Academic Calendar shall not overwrite the previous confirmed Academic Calendar unless the replacement successfully completes the complete workflow. A failed or rejected replacement shall leave the previous confirmed Academic Calendar active.
 
 ---
 
-### FR-009 — Attendance Slot Weight
+### FR-009 — Confirmed Timetable and Academic Calendar Structure
 
-AttendSense shall apply the following Phase 1 attendance-slot weights to future scheduled classes:
+The confirmed timetable shall preserve calculation-relevant information where reliably available, including day/date applicability, class start/end time, course code or session identity, theory/practical distinction, batch applicability, and continuous multi-period session structure. A continuous practical or laboratory session shall be treated as one scheduled attendance event when identified as continuous; AttendSense shall not apply a universal duration-based attendance weight.
 
-- **Lecture = 1 attendance slot**
-- **Laboratory session = 2 attendance slots**
+The confirmed Academic Calendar shall classify relevant information conservatively as Teaching, Teaching Continues, Non-Teaching, or Unknown / Requires Review. Teaching and Teaching Continues permit timetable sessions; confirmed public holidays and non-teaching periods may suppress them. Unknown or ambiguous calendar events shall require review or conservative handling and shall not silently suppress timetable sessions.
 
-The slot weight shall be used consistently by:
-
-- Safe Bunk Calculator.
-- Attendance Recovery Calculator.
-- Future Attendance Simulator.
-
-For future attendance calculations:
-
-**Attended Lecture**
-- Present Slots +1
-- Effective Total Slots +1
-
-**Missed Lecture**
-- Present Slots +0
-- Effective Total Slots +1
-
-**Attended Laboratory Session**
-- Present Slots +2
-- Effective Total Slots +2
-
-**Missed Laboratory Session**
-- Present Slots +0
-- Effective Total Slots +2
+Academic Calendar applicability and scope metadata shall be respected where required.
 
 ---
 
@@ -1384,27 +1342,26 @@ Validation shall include applicable checks such as:
 - File corruption.
 - Empty or unusable input.
 - Number of selected images where relevant.
-- Other implementation-defined limits required for safe processing.
 
 Invalid files shall not proceed to attendance analysis.
 
 The student shall receive a clear error or retry instruction when the input cannot be processed.
 
+Core feasibility for attendance PDF/image extraction, multiple-image handling, timetable screenshot extraction, Academic Calendar PDF extraction, course-code matching, batch/calendar filtering, deterministic calculation, and end-to-end integration has been successfully validated. This does not claim production readiness; PWA share-target compatibility remains subject to implementation and platform validation.
+
 ---
 
 ### FR-018 — PDF Attendance Extraction
 
-AttendSense shall process supported PDF attendance files to extract the information required to determine the student's overall attendance dataset.
+AttendSense shall process supported PDF attendance files to extract the course-aware attendance information required for approved calculations.
 
 The extraction workflow shall attempt to identify relevant values such as:
 
-- Overall Present Slots.
-- Displayed or reported Total Slots, where available.
+- Course code and course name/label where available.
+- Conducted, present, and absent attendance values.
+- Theory/practical identity where represented by official course code.
 - No Attendance or equivalent non-attendance slots, where applicable.
-- Overall attendance percentage, where available for validation.
-- Other values required to reliably determine Overall Effective Total Slots.
-
-The final extraction technology for PDF processing shall be selected after technical evaluation.
+- Reported course or overall percentage, where available for validation.
 
 The system shall not use unreliable or incomplete extracted information for attendance analysis.
 
@@ -1412,19 +1369,17 @@ The system shall not use unreliable or incomplete extracted information for atte
 
 ### FR-019 — Image Attendance Extraction
 
-AttendSense shall process supported attendance images to extract the information required to determine the student's overall attendance dataset.
+AttendSense shall process supported attendance images to extract the course-aware attendance information required for approved calculations.
 
 The extraction workflow shall attempt to identify relevant values such as:
 
-- Overall Present Slots.
-- Displayed or reported Total Slots, where available.
+- Course code and course name/label where available.
+- Conducted, present, and absent attendance values.
+- Theory/practical identity where represented by official course code.
 - No Attendance or equivalent non-attendance slots, where applicable.
-- Overall attendance percentage, where available for validation.
-- Other information required to reliably interpret and validate the attendance data.
+- Reported course or overall percentage, where available for validation.
 
-Course-level or other information may be extracted when useful for document interpretation or validation, but individual subject-wise attendance percentages shall not form the basis of Phase 1 attendance calculations.
-
-The final OCR/vision technology shall be selected after technical evaluation.
+Course-aware records shall be the primary basis for Phase 1 calculations. Overall attendance may be retained as supporting context.
 
 ---
 
@@ -1439,7 +1394,7 @@ For a multi-image submission, the system shall:
 3. Combine complementary attendance information where required.
 4. Detect duplicated or overlapping attendance information where reasonably possible.
 5. Prevent duplicated information from being counted more than once.
-6. Determine whether the complete submission provides sufficient information to derive and validate the required overall attendance values.
+6. Determine whether the complete submission provides sufficient information to derive and validate a reliable course-aware attendance dataset.
 
 If the images cannot be reliably combined into a valid attendance dataset, the system shall stop the processing workflow and request appropriate corrective action from the student.
 
@@ -1447,20 +1402,13 @@ If the images cannot be reliably combined into a valid attendance dataset, the s
 
 ## 5.7 Attendance Normalization and Validation
 
-### FR-021 — Standard Overall Attendance Structure
+### FR-021 — Standard Course-Aware Attendance Structure
 
 AttendSense shall normalize successfully extracted attendance information into a standard internal attendance structure.
 
-The normalized structure shall contain the information required for Phase 1 overall attendance analysis, including:
+The normalized structure shall contain calculation-eligible course records with course code where available, course name/label where available, conducted, present, absent, calculated percentage, theory/practical identity where applicable, and required validation/review status. No Attendance or equivalent information and overall attendance may be preserved where useful for normalization, cross-validation, or supporting context.
 
-- **Overall Present Slots**
-- **Overall Effective Total Slots**
-- Displayed or reported Total Slots, where relevant to normalization.
-- No Attendance or equivalent non-attendance slots, where applicable.
-- Calculated Overall Attendance Percentage.
-- Relevant validation metadata required by the implementation.
-
-Individual subject-wise attendance percentages shall not form the calculation basis of Phase 1 attendance analysis.
+Course-wise conducted, present, and absent records shall be the primary calculation basis for Phase 1 analysis.
 
 ---
 
@@ -1500,30 +1448,34 @@ AttendSense shall validate normalized attendance values before student confirmat
 
 Validation shall include applicable checks such as:
 
-- Overall Present Slots shall not be negative.
-- Overall Effective Total Slots shall be greater than zero before percentage calculation.
-- Overall Present Slots shall not exceed Overall Effective Total Slots.
+- Conducted, present, and absent attendance shall not be negative.
+- Present plus absent attendance shall equal conducted attendance.
+- Present and absent attendance shall not exceed conducted attendance.
+- Calculated course attendance shall be between 0% and 100%.
+- Required course identity shall be available before a record becomes calculation-eligible.
+- Theory/practical separation shall be preserved where applicable.
+- Duplicate or overlapping records shall not be double-counted.
 - No Attendance slots shall not be negative where present.
-- Effective Total Slots shall correctly reflect required No Attendance normalization.
-- Calculated overall attendance shall remain between 0% and 100%.
 - Related extracted attendance values shall be internally consistent.
 - Required values shall be present before attendance analysis is allowed.
+
+Where conducted attendance is zero, AttendSense shall not divide by zero and shall require safe handling according to the applicable calculation.
 
 Data that fails required validation shall not be accepted as a confirmed attendance dataset.
 
 ---
 
-### FR-024 — Independent Overall Attendance Calculation
+### FR-024 — Independent Course Attendance Calculation
 
-AttendSense shall independently calculate overall attendance using the normalized confirmed attendance values.
+AttendSense shall independently calculate attendance for each valid confirmed course record with conducted attendance greater than zero.
 
 The Phase 1 formula shall be:
 
-**Overall Attendance Percentage = (Overall Present Slots / Overall Effective Total Slots) × 100**
+**Course Attendance Percentage = (Present / Conducted) × 100**
 
-The independently calculated value shall be used as the system's attendance percentage for attendance analysis.
+The independently calculated value shall be used for course-aware attendance analysis. Full precision shall be used internally; rounding shall be applied only for student-facing display, and threshold decisions shall use the unrounded value.
 
-A percentage extracted directly from an uploaded attendance file may be used as a validation or comparison value where available but shall not replace the system's independent calculation.
+A percentage extracted directly from an uploaded attendance file may be used for validation or comparison where available but shall not replace the system's independent calculation.
 
 ---
 
@@ -1533,8 +1485,8 @@ AttendSense shall perform automatic cross-validation before presenting newly int
 
 Cross-validation may include:
 
-- Comparing independently calculated overall attendance with a reported overall percentage where available.
-- Verifying that Overall Present Slots do not exceed Overall Effective Total Slots.
+- Comparing independently calculated course attendance with a reported percentage where available.
+- Verifying conducted, present, and absent attendance consistency.
 - Verifying No Attendance normalization where relevant.
 - Checking consistency between displayed totals and normalized totals.
 - Detecting duplicated or overlapping information across multiple submitted images.
@@ -1568,13 +1520,7 @@ the system shall stop the new-dataset processing workflow and request appropriat
 
 After successful extraction, normalization, and automatic validation, AttendSense shall present the interpreted attendance information to the student before it becomes eligible for attendance analysis.
 
-The review interface shall prominently present relevant interpreted values such as:
-
-- Overall Present Slots.
-- Overall Effective Total Slots.
-- Displayed/Reported Total Slots where relevant.
-- No Attendance slots where relevant.
-- Calculated Overall Attendance Percentage.
+The review interface shall prominently present relevant interpreted course records, including course identity where available, conducted, present, absent, calculated percentage, theory/practical distinction where applicable, and relevant normalization information.
 
 The review interface shall clearly communicate that the student is confirming the correctness of the interpreted attendance information.
 
@@ -1596,7 +1542,7 @@ If the student rejects the dataset:
 - The rejected dataset shall not replace the existing confirmed attendance dataset.
 - The student shall be allowed to provide attendance information again.
 
-Manual editing of extracted attendance numbers shall not be the standard correction mechanism for Phase 1.
+Students shall be allowed to manually correct extracted attendance information before confirmation. Corrected data shall pass required validation before it can be confirmed and saved.
 
 ---
 
@@ -1624,38 +1570,37 @@ Calculator and simulation outputs shall never modify the latest confirmed attend
 
 When an attendance-analysis feature requires future class information, AttendSense shall generate applicable future lecture and laboratory occurrences using:
 
-- The student's predefined class timetable.
-- The applicable academic calendar.
-- The relevant date or analysis period.
+- The student's confirmed timetable.
+- The student's confirmed Academic Calendar.
+- Course-code mapping.
+- Batch applicability where relevant.
+- The relevant date/time and feature-specific analysis period.
 
-Timetable occurrences falling on holidays or other defined non-working academic days shall not be treated as applicable future classes. When the relevant analysis period includes the current date, only applicable classes whose scheduled start time has not yet passed shall be generated as future class occurrences.
+Confirmed holidays and non-teaching periods may suppress timetable sessions, while Teaching and Teaching Continues permit them. Unknown or ambiguous calendar events shall not silently suppress sessions. Batch-mismatched, code-less, ambiguous, or unmatched sessions shall not affect attendance calculations without confirmed applicability or mapping.
+
+Where a valid structured course code exists, it shall be the primary identity for matching an attendance record with a timetable session. Theory and practical courses with separate official codes shall remain separate, minor OCR course-name differences shall not override a valid course-code match, and code-less activities may remain visible only for display/review until a mapping is confirmed.
+
+When Safe Bunk considers the current date, only classes where current_time is before class_start_time shall be generated as selectable bunk opportunities.
 
 ---
 
 ### FR-031 — Future Class Attendance Decisions
 
-Future lecture and laboratory selection shall represent **future attendance decisions**, not separate subject-wise attendance calculations.
+Future session selection shall represent **future attendance decisions** applied to corresponding matched course records.
 
-Each applicable future class shall carry its defined attendance-slot weight:
-
-- Lecture = **1 attendance slot**
-- Laboratory session = **2 attendance slots**
+A practical or laboratory session confirmed as one continuous multi-period session shall be treated as one scheduled attendance event.
 
 Where applicable, the student shall be able to select one or multiple future classes according to the workflow of the selected analysis feature.
 
-The effect of future attendance decisions shall be applied to the student's overall Present Slots and Effective Total Slots.
+The effect of future attendance decisions shall be applied to each affected matched course record.
 
 ---
 
-## 5.10 Confirmed Overall Attendance
+## 5.10 Confirmed Attendance Context
 
-### FR-032 — Confirmed Overall Attendance Determination
+### FR-032 — Confirmed Attendance Context
 
-AttendSense shall calculate the student's current confirmed overall attendance from the latest confirmed attendance dataset using:
-
-**Overall Attendance Percentage = (Overall Present Slots / Overall Effective Total Slots) × 100**
-
-The calculated current attendance may be displayed as supporting contextual information within relevant AttendSense screens and attendance-analysis results.
+AttendSense shall make current confirmed course attendance available as supporting information within relevant screens and attendance-analysis results. Overall attendance may also be displayed as supporting context where available.
 
 **Current Attendance Calculation shall not exist as a separate calculator or standalone Phase 1 analysis feature.**
 
@@ -1665,9 +1610,9 @@ The calculated current attendance may be displayed as supporting contextual info
 
 ### FR-033 — Safe Bunk Eligibility
 
-The Safe Bunk Calculator shall be available when the student's latest confirmed overall attendance is **at or above 75%**.
+The Safe Bunk Calculator shall be available to evaluate a potential skip for an applicable matched course when that course's confirmed attendance is **at or above 75%**.
 
-If the student's confirmed overall attendance is below 75%:
+If the applicable confirmed course attendance is below 75%:
 
 - Safe Bunk analysis shall not proceed.
 - AttendSense shall clearly indicate that the student is currently below the required threshold.
@@ -1677,73 +1622,42 @@ If the student's confirmed overall attendance is below 75%:
 
 ### FR-034 — Safe Bunk Planning Period
 
-Safe Bunk analysis shall consider applicable scheduled classes beginning from the **current day through the final applicable academic day of the current week**.
+Safe Bunk analysis shall consider only the student's applicable remaining scheduled classes for the **current day**.
 
 AttendSense shall:
 
-- Use the applicable timetable.
-- Use the academic calendar.
-- Exclude holidays and other non-working academic days.
-- Generate the valid upcoming lectures and laboratory sessions within the applicable period.
+- Use the confirmed timetable and confirmed Academic Calendar.
+- Apply course-code mapping and batch applicability.
+- Exclude sessions whose scheduled start time has been reached.
+- Exclude confirmed holidays and non-teaching periods.
 
 ---
 
 ### FR-035 — Safe Bunk Class Selection
 
-Applicable future classes displayed in Safe Bunk shall initially have the status:
-
-**ATTEND**
-
-The student shall be able to change one or multiple applicable future classes from:
-
-**ATTEND → BUNK**
+Safe Bunk shall display today's remaining applicable classes and allow the student to explicitly select one or multiple classes they are considering missing.
 
 The system shall not impose an arbitrary predefined limit on the number of displayed classes that the student may mark as BUNK.
 
-The calculation itself shall determine whether the complete selected plan remains mathematically safe.
+Unselected displayed classes shall not be assumed to be attended or otherwise affect the Safe Bunk projection. The calculation itself shall determine whether the complete selected plan remains mathematically safe.
 
 ---
 
 ### FR-036 — Safe Bunk Calculation
 
-Safe Bunk shall use the student's latest confirmed:
+For each explicitly selected applicable skipped class of matched course C, AttendSense shall calculate:
 
-- Overall Present Slots.
-- Overall Effective Total Slots.
+**new_conducted_C = conducted_C + 1**  
+**new_present_C = present_C**  
+**new_absent_C = absent_C + 1**
 
-For each future class in the selected plan:
+**Projected Course Attendance = (new_present_C / new_conducted_C) × 100**
 
-**ATTENDED LECTURE**
-- Present Slots +1
-- Effective Total Slots +1
+Multiple selected skipped occurrences for the same course shall be aggregated. Selected classes from different courses shall be calculated independently.
 
-**BUNKED LECTURE**
-- Present Slots +0
-- Effective Total Slots +1
+A selected bunk plan shall be classified as mathematically safe only when every affected matched course remains at or above 75% using unrounded values. A projected value below 75% shall be classified as unsafe; the student-facing result shall distinguish Above Threshold / Safe, Exactly At Threshold, and Below Threshold / Unsafe as applicable.
 
-**ATTENDED LAB**
-- Present Slots +2
-- Effective Total Slots +2
-
-**BUNKED LAB**
-- Present Slots +0
-- Effective Total Slots +2
-
-AttendSense shall calculate the projected overall attendance after applying the complete selected plan.
-
-If:
-
-**Projected Overall Attendance >= 75%**
-
-the selected bunk plan shall be classified as mathematically safe.
-
-If:
-
-**Projected Overall Attendance < 75%**
-
-the selected bunk plan shall be classified as unsafe.
-
-The result shall clearly communicate that classes remaining marked as ATTEND are assumed to be attended within the selected plan.
+Overall attendance may be displayed as supporting context only.
 
 Safe Bunk calculations shall not modify the latest confirmed attendance dataset.
 
@@ -1753,70 +1667,63 @@ Safe Bunk calculations shall not modify the latest confirmed attendance dataset.
 
 ### FR-037 — Attendance Recovery Eligibility
 
-Attendance Recovery Calculator shall be available when the student's latest confirmed overall attendance is **below 75%**.
+Attendance Recovery Calculator shall be available when an applicable confirmed course attendance record is **below 75%**.
 
-If confirmed overall attendance is already at or above 75%, AttendSense shall indicate that attendance recovery is not currently required.
+If the applicable confirmed course attendance is already at or above 75%, AttendSense shall indicate that attendance recovery is not currently required for that course.
 
 ---
 
-### FR-038 — Required Recovery Slot Calculation
+### FR-038 — Required Course Recovery Calculation
 
-AttendSense shall calculate the minimum number of additional attendance slots that must be successfully attended for the student's mathematically projected overall attendance to reach at least 75%.
+AttendSense shall calculate the minimum number of additional future sessions that must be successfully attended for an applicable course record to mathematically reach at least 75%.
 
 For:
 
-- `P` = Overall Present Slots
-- `T` = Overall Effective Total Slots
-- `x` = Additional successfully attended attendance slots
+- `P` = Course Present
+- `C` = Course Conducted
+- `x` = Additional successfully attended sessions for that course
 
 AttendSense shall determine the minimum non-negative integer `x` satisfying:
 
-**(P + x) / (T + x) >= 0.75**
+**(P + x) / (C + x) >= 0.75**
 
-The resulting `x` shall represent the minimum number of additional **attendance slots**, not necessarily the number of individual classes.
+The resulting `x` shall represent the minimum number of additional future attended sessions for that course.
 
 ---
 
 ### FR-039 — Recovery Schedule Mapping
 
-After determining the required recovery attendance slots, AttendSense shall map the requirement to applicable future scheduled classes using:
+After determining the required course recovery attendance, AttendSense shall map the requirement to applicable future scheduled sessions of the same course using:
 
-- The predefined class timetable.
-- The applicable academic calendar.
-- Lecture/laboratory slot weights.
+- The confirmed timetable.
+- The confirmed Academic Calendar.
+- Course-code mapping.
+- Batch applicability.
 
 Recovery mapping shall begin with the next applicable future scheduled class.
 
-For recovery purposes:
-
-**Attended Lecture**
-- Present Slots +1
-- Effective Total Slots +1
-
-**Attended Laboratory Session**
-- Present Slots +2
-- Effective Total Slots +2
+For each projected attended matched session, conducted attendance and present attendance shall increase by one while absent attendance remains unchanged.
 
 Holidays and other non-working academic days shall not contribute attendance opportunities.
 
-Recovery planning may continue across subsequent academic weeks until sufficient attendance slots have been accumulated.
+Recovery planning may continue across available future schedule coverage until sufficient attended sessions have been accumulated.
 
 ---
 
 ### FR-040 — Recovery Point Determination
 
-Where sufficient timetable and academic-calendar information is available, AttendSense shall determine the earliest projected point at which the student's overall attendance reaches at least 75% by successfully attending the applicable recovery classes.
+Where sufficient timetable and Academic Calendar information is available, AttendSense shall determine the earliest projected point at which the applicable course attendance reaches at least 75% by successfully attending the applicable recovery sessions.
 
 The recovery result may include:
 
-- Required recovery attendance slots.
-- Applicable future lectures/laboratory sessions.
-- Projected attendance at the recovery point.
+- Required future attended sessions for the course.
+- Applicable future sessions for the course.
+- Projected course attendance at the recovery point.
 - Earliest projected recovery date where determinable.
 
 If available timetable or academic-calendar data ends before enough future attendance opportunities can be generated:
 
-- AttendSense shall still display the mathematically required recovery-slot count.
+- AttendSense shall still display the mathematically required attended-session count.
 - AttendSense shall clearly indicate that the complete recovery schedule or recovery date cannot currently be determined.
 - AttendSense shall not invent future class occurrences.
 
@@ -1830,17 +1737,17 @@ Attendance Recovery calculations shall not modify the latest confirmed attendanc
 
 Future Attendance Simulator shall be available whenever a valid latest confirmed attendance dataset exists.
 
-Its availability shall **not depend on whether the student's confirmed overall attendance is above, equal to, or below 75%**.
+Its availability shall **not depend on whether the student's confirmed attendance is above, equal to, or below 75%**.
 
 ---
 
 ### FR-042 — Future Simulation Period
 
-Future Attendance Simulator shall allow the student to select an applicable future simulation period within the range supported by available timetable and academic-calendar data.
+Future Attendance Simulator shall allow the student to select an applicable future simulation period within the range supported by confirmed timetable and Academic Calendar data.
 
-Unlike Safe Bunk, Future Attendance Simulator shall not be restricted only to the remainder of the current academic week.
+Unlike Safe Bunk, which focuses on today's remaining applicable classes, Future Attendance Simulator may cover the selected applicable future period.
 
-AttendSense shall generate applicable scheduled lectures and laboratory sessions within the selected simulation period.
+AttendSense shall generate applicable scheduled sessions within the selected simulation period using confirmed timetable, Academic Calendar, course-code mapping, batch applicability, and date/time as appropriate.
 
 Holidays and other non-working academic days shall be excluded.
 
@@ -1863,30 +1770,19 @@ No 75% eligibility restriction shall be applied to the student's hypothetical se
 
 ### FR-044 — Future Attendance Simulation Calculation
 
-Future Attendance Simulator shall use the student's latest confirmed:
+For each explicitly marked matched class of course C:
 
-- Overall Present Slots.
-- Overall Effective Total Slots.
+**ATTEND**  
+conducted_C += 1  
+present_C += 1  
+absent_C unchanged
 
-For the hypothetical future scenario:
+**BUNK/MISS**  
+conducted_C += 1  
+present_C unchanged  
+absent_C += 1
 
-**Attended Lecture**
-- Present Slots +1
-- Effective Total Slots +1
-
-**Missed Lecture**
-- Present Slots +0
-- Effective Total Slots +1
-
-**Attended Laboratory Session**
-- Present Slots +2
-- Effective Total Slots +2
-
-**Missed Laboratory Session**
-- Present Slots +0
-- Effective Total Slots +2
-
-AttendSense shall calculate the predicted overall attendance resulting from the complete hypothetical scenario.
+AttendSense shall apply the selected scenario independently to each affected course, maintaining theory/practical separation, and calculate projected course attendance. Overall attendance may be displayed as supporting context where useful.
 
 The simulator may update the predicted attendance interactively as the student changes ATTEND/BUNK selections.
 
@@ -1896,11 +1792,10 @@ The simulator may update the predicted attendance interactively as the student c
 
 The Future Attendance Simulator result may display:
 
-- Current confirmed overall attendance.
-- Number of future attended attendance slots.
-- Number of future missed attendance slots.
-- Predicted overall attendance.
-- Change from current attendance.
+- Current confirmed course attendance.
+- Number of future attended and missed sessions.
+- Projected course attendance.
+- Change from the current course attendance.
 - Position relative to the fixed 75% threshold.
 - Selected future attendance scenario.
 
@@ -1914,18 +1809,18 @@ Future Attendance Simulator results shall not modify the latest confirmed attend
 
 ### FR-046 — Fixed 75% Threshold
 
-AttendSense Phase 1 shall use a fixed minimum overall attendance threshold of:
+AttendSense Phase 1 shall use a fixed minimum attendance threshold of:
 
 **75%**
 
 The threshold shall:
 
-- Be predefined by the system.
+- Be defined by the product requirements.
 - Not be configurable by students.
-- Determine Safe Bunk eligibility when confirmed overall attendance is at or above 75%.
-- Determine Attendance Recovery eligibility when confirmed overall attendance is below 75%.
-- Determine whether a selected Safe Bunk plan remains mathematically safe.
-- Serve as the mathematical target for Attendance Recovery.
+- Determine Safe Bunk eligibility for an applicable confirmed course attendance record at or above 75%.
+- Determine Attendance Recovery applicability for an applicable confirmed course attendance record below 75%.
+- Determine whether each affected matched course remains safe after a selected bunk plan.
+- Serve as the mathematical target for course-specific Attendance Recovery.
 - Be shown as contextual information where relevant in Future Attendance Simulation.
 
 Future Attendance Simulator availability shall not depend on the 75% threshold.
@@ -1940,20 +1835,20 @@ AttendSense shall present attendance-analysis results in a clear, understandable
 
 Depending on the selected feature, results may include:
 
-- Current confirmed overall attendance as supporting context.
-- Attendance position relative to 75%.
+- Confirmed applicable course attendance.
+- Projected course attendance and position relative to 75%.
 - Safe/unsafe bunk-plan status.
-- Projected overall attendance after a Safe Bunk plan.
+- Projected attendance for affected courses after a Safe Bunk plan.
 - Selected future bunk/attend decisions.
-- Minimum additional attendance slots required for recovery.
-- Applicable future lectures/laboratory sessions contributing to recovery.
-- Projected attendance at the recovery point.
+- Minimum additional attended sessions required for course recovery.
+- Applicable future sessions contributing to recovery.
+- Projected course attendance at the recovery point.
 - Estimated recovery date where determinable.
-- Future attended slots.
-- Future missed slots.
-- Predicted overall attendance from Future Attendance Simulator.
+- Future attended and missed sessions.
+- Projected course attendance from Future Attendance Simulator.
 - Relevant future class dates.
-- Lecture/laboratory attendance-slot impact.
+- Relevant future session impact.
+- Overall attendance as supporting context where useful.
 
 AttendSense shall visually and semantically distinguish between:
 
@@ -1978,6 +1873,8 @@ After viewing an attendance-analysis result, the student shall be able to perfor
 - Select another applicable analysis feature.
 - Return to the dashboard.
 - Update attendance information.
+- Update or replace timetable information.
+- Update or replace Academic Calendar information.
 
 Repeated analyses shall continue using the same latest confirmed attendance dataset until a newer dataset is successfully processed, reviewed, confirmed, and saved.
 
@@ -1991,7 +1888,7 @@ AttendSense shall allow the student to provide newer official attendance informa
 
 A newer attendance submission shall pass through the complete required workflow:
 
-**Input → File Validation → Extraction → Normalization → Automatic Validation → Student Review → Student Confirmation → Save**
+**Input → File/Input Validation → Extraction → Normalization → Automatic Validation → Student Review/Edit → Student Confirmation → Save**
 
 Only after successful completion of the complete workflow shall the newer dataset become the latest confirmed attendance dataset.
 
@@ -2006,11 +1903,12 @@ When a newer attendance dataset is successfully processed, validated, reviewed, 
 
 If the newer dataset:
 
-- Fails file processing.
+- Fails file/input validation.
 - Fails extraction.
 - Fails normalization.
 - Fails required validation.
 - Is rejected by the student.
+- Does not complete student confirmation.
 - Cannot be successfully saved.
 
 the previously confirmed attendance dataset shall remain active and unchanged.
@@ -2029,8 +1927,9 @@ Examples include:
 - Corrupted file.
 - Unreadable image.
 - Invalid PDF.
-- Required Overall Present Slots cannot be determined.
-- Required Total/Effective Total Slots cannot be determined.
+- Required course-aware attendance values cannot be determined.
+- Missing or ambiguous course identity where required.
+- Inconsistent conducted, present, and absent attendance values.
 - Required No Attendance normalization cannot be performed reliably.
 - Contradictory attendance values.
 - Invalid attendance values.
@@ -2048,7 +1947,12 @@ Examples include:
 
 - Missing timetable.
 - Missing academic calendar.
-- Unsupported academic configuration.
+- Invalid or unreadable timetable image.
+- Invalid or unreadable Academic Calendar PDF.
+- Unconfirmed timetable or Academic Calendar.
+- Uncertain batch applicability.
+- Unmatched or ambiguous course mapping.
+- Ambiguous calendar state.
 - Future timetable data unavailable for the requested period.
 
 The system shall clearly communicate the limitation to the student.
@@ -2062,9 +1966,8 @@ Where a mathematical result can still be reliably determined without unavailable
 AttendSense shall perform attendance calculations only using:
 
 - Valid latest confirmed attendance data.
-- Defined attendance-slot rules.
-- Applicable timetable information.
-- Applicable academic-calendar information.
+- Confirmed timetable and Academic Calendar data where required.
+- Course-code mapping and batch applicability where required.
 - Fixed 75% threshold.
 - Student-selected future attendance decisions where required.
 
@@ -2076,7 +1979,7 @@ AttendSense shall not use:
 - Hypothetical simulator results as confirmed attendance.
 - Previous calculator outputs as updated official attendance.
 
-Generative AI shall not determine final attendance percentages, Safe Bunk eligibility/results, recovery requirements, or Future Attendance Simulation results.
+Generative AI / LLM reasoning shall not determine final attendance percentages, projected attendance, Safe Bunk eligibility/results, recovery requirements, threshold classifications, or Future Attendance Simulation results.
 
 These results shall be produced through deterministic mathematical logic.
 
@@ -2112,8 +2015,10 @@ The interface shall adapt appropriately while maintaining the functionality requ
 
 - Authentication.
 - Academic configuration.
+- Timetable upload, review/edit, and replacement.
+- Academic Calendar upload, review/edit, and replacement.
 - Attendance upload.
-- Attendance review.
+- Attendance review/edit.
 - Safe Bunk planning.
 - Attendance Recovery.
 - Future Attendance Simulation.
@@ -2123,7 +2028,7 @@ The interface shall adapt appropriately while maintaining the functionality requ
 
 ### FR-057 — Interactive Attendance Planning
 
-Attendance-planning interfaces shall provide clear interactive controls for applicable future lecture and laboratory selections.
+Attendance-planning interfaces shall provide clear interactive controls for applicable future session selections.
 
 Where ATTEND/BUNK selection is used:
 
@@ -2132,6 +2037,8 @@ Where ATTEND/BUNK selection is used:
 - Lecture and laboratory sessions shall be distinguishable.
 - Relevant dates and schedule grouping shall be understandable.
 - Result changes shall be presented clearly.
+
+Safe Bunk controls shall support explicit bunk selection only; Future Attendance Simulator controls may support the complete ATTEND/BUNK scenario.
 
 The UI shall prioritize clarity, usability, and efficient student interaction rather than presenting attendance analysis as a basic numerical calculator.
 
@@ -2143,85 +2050,59 @@ The Phase 1 functional workflow shall support:
 
 **Google Authentication**  
 ↓  
-**Academic Configuration**  
+**Academic Context**  
 ↓  
-**Timetable + Academic Calendar Association**  
+**Confirmed Timetable Available? → Upload Image/Screenshot → Extract → Validate → Review/Edit → Confirm → Save, if needed**  
 ↓  
-**Attendance PDF/Image Input or Supported PWA Share Target**  
+**Confirmed Academic Calendar Available? → Upload PDF → Extract → Validate → Review/Edit → Confirm → Save, if needed**  
 ↓  
-**File Validation**  
+**Attendance PDF/Image(s) Input or Supported PWA Share Target**  
 ↓  
-**Attendance Data Extraction**  
+**Extraction → Normalization/Structured Data → Automatic Validation → Student Review/Edit → Confirmation → Save**  
 ↓  
-**Normalization**  
+**Latest Confirmed Course-Aware Attendance Dataset**  
 ↓  
-**No Attendance Handling Where Required**  
-↓  
-**Automatic Validation**  
-↓  
-**Student Review**  
-↓  
-**Student Confirmation**  
-↓  
-**Latest Confirmed Attendance Dataset Saved**  
-↓  
-**Overall Present Slots + Effective Total Slots**  
-↓  
-**Select Analysis Feature**
+**Course-Code-First Matching and Select Analysis Feature**
 
 ### Safe Bunk
 
-**Confirmed Attendance >= 75%**  
+**Applicable Confirmed Course Attendance >= 75%**  
 ↓  
-**Today → End of Current Academic Week**  
+**Today's Remaining Applicable Classes Only**  
 ↓  
-**Generate Applicable Future Classes**  
+**Student Selects Classes to Bunk**  
 ↓  
-**Default = ATTEND**  
+**Project Only Selected Skips by Matched Course**  
 ↓  
-**Student Selects BUNK Classes**  
+**Compare Each Affected Course with 75%**  
 ↓  
-**Lecture = 1 Slot / Lab = 2 Slots**  
-↓  
-**Projected Overall Attendance**  
-↓  
-**SAFE / UNSAFE**
+**Safe / At Threshold / Unsafe Result**
 
 ### Attendance Recovery
 
-**Confirmed Attendance < 75%**  
+**Applicable Confirmed Course Attendance < 75%**  
 ↓  
-**Calculate Required Recovery Attendance Slots**  
+**Calculate Required Future Attended Sessions for That Course**  
 ↓  
-**Map Required Slots to Timetable + Academic Calendar**  
+**Map to Confirmed Timetable and Academic Calendar Sessions**  
 ↓  
-**Lecture = 1 Slot / Lab = 2 Slots**  
+**Determine Recovery Path Where Coverage Allows**  
 ↓  
-**Determine Recovery Path**  
-↓  
-**Projected Recovery Point / Date Where Determinable**
+**Course Recovery Result**
 
 ### Future Attendance Simulator
 
-**Available at Any Confirmed Attendance Percentage**  
+**Available at Any Confirmed Attendance Position**  
 ↓  
 **Select Future Simulation Period**  
 ↓  
-**Generate Applicable Future Classes**  
-↓  
-**Default = ATTEND**  
-↓  
 **Student Creates ATTEND/BUNK Scenario**  
 ↓  
-**Lecture = 1 Slot / Lab = 2 Slots**  
+**Project Each Matched Course Independently**  
 ↓  
-**Predicted Overall Attendance**
+**Hypothetical Course-Attendance Result**
 
-All three analysis features shall use the student's **latest confirmed attendance dataset** as their base attendance information.
-
-Calculator and simulation results shall not modify that dataset.
-
-The dataset shall remain active until a newer attendance dataset successfully completes the required processing, validation, student review, confirmation, and saving workflow.
+All three analysis features shall use the student's latest confirmed attendance dataset, confirmed timetable, and confirmed Academic Calendar where required. Calculator and simulation results shall not modify confirmed attendance. Each confirmed input shall remain active until a newer replacement successfully completes its required review, confirmation, and saving workflow.
 
 ---
 
@@ -2229,17 +2110,16 @@ The dataset shall remain active until a newer attendance dataset successfully co
 
 ## 6.1 Purpose
 
-This section defines the deterministic mathematical rules used by AttendSense for all Phase 1 attendance calculations.
+This section defines the deterministic, course-aware mathematical rules used by AttendSense for all Phase 1 attendance calculations.
 
-All attendance-analysis features shall operate on the student's **latest confirmed attendance dataset**.
+All attendance-analysis features shall begin with the student's **latest confirmed attendance dataset** and the relevant confirmed course record or records within it.
 
-The calculation engine shall use the student's overall attendance values rather than individual subject-wise attendance percentages.
+For each calculation-eligible confirmed course record C, the primary values shall be:
 
-The primary attendance values shall be:
-
-- **P = Overall Present Slots**
-- **E = Overall Effective Total Slots**
-- **T = Minimum Attendance Threshold**
+- `C.conducted`
+- `C.present`
+- `C.absent`
+- `T = Minimum Attendance Threshold`
 
 For Phase 1:
 
@@ -2257,26 +2137,24 @@ Calculator and simulation results shall never modify the student's latest confir
 
 ## 6.2 Core Attendance Values
 
-AttendSense Phase 1 shall perform attendance calculations using:
+AttendSense Phase 1 shall perform calculation-critical attendance analysis using confirmed course records.
 
-- **P = Overall Present Slots**
-- **E = Overall Effective Total Slots**
+The following conditions shall be satisfied before a course record participates in calculation:
 
-The following conditions shall be satisfied before attendance calculations proceed:
+- `conducted >= 0`
+- `present >= 0`
+- `absent >= 0`
+- `present + absent = conducted`
+- `present <= conducted`
+- `absent <= conducted`
 
-- `P >= 0`
-- `E > 0`
-- `P <= E`
-
-Where No Attendance or equivalent non-attendance information is present, the Effective Total Slots value shall already have been normalized according to the attendance-data normalization rules before reaching the calculation engine.
-
-Invalid, incomplete, unconfirmed, or unreliable attendance values shall not be passed to the calculation engine.
+For `conducted > 0`, course attendance shall be `(present / conducted) × 100`. If `conducted = 0`, AttendSense shall not divide by zero or make a percentage-based attendance decision; the record shall require conservative review. Invalid, incomplete, unconfirmed, unmatched, or unreliable records shall not enter calculation-critical logic.
 
 ---
 
-## 6.3 Effective Total Slots
+## 6.3 Supporting Overall Attendance Normalization
 
-AttendSense shall use **Effective Total Slots** rather than blindly using the displayed Total Slots value from an uploaded attendance source.
+Where valid and available, overall attendance and No Attendance normalization may be retained for supporting context or cross-validation. They shall not replace course-wise conducted, present, and absent records as the primary basis for Safe Bunk, Recovery, or Future Attendance Simulator calculations.
 
 Where:
 
@@ -2301,7 +2179,7 @@ Then:
 
 **E = 167**
 
-Therefore, the attendance calculation shall use:
+Therefore, supporting overall normalization shall use:
 
 - **P = 142**
 - **E = 167**
@@ -2318,36 +2196,37 @@ with No Attendance already excluded, AttendSense shall use:
 
 and shall **not subtract the 21 No Attendance slots again**.
 
-This normalization shall occur before attendance analysis.
+This normalization may occur before supporting overall attendance is displayed or cross-validated; it shall not replace course-wise calculation inputs.
 
 ---
 
-## 6.4 Confirmed Overall Attendance Percentage
+## 6.4 Confirmed Course Attendance Percentage
 
-The student's confirmed overall attendance percentage shall be calculated using:
+For a valid confirmed course record with `conducted > 0`, course attendance shall be calculated using:
 
-**Overall Attendance % = (P / E) × 100**
+**Course Attendance % = (present / conducted) × 100**
 
 ### Example
 
-Suppose:
+For AI Theory, suppose:
 
-- Present Slots = 142
-- Effective Total Slots = 167
+- conducted = 30
+- present = 27
+- absent = 3
 
 Then:
 
-**Overall Attendance = (142 / 167) × 100**
+**Course Attendance = (27 / 30) × 100**
 
-**= 85.03%**
+**= 90%**
 
-Therefore, the student's confirmed overall attendance is:
+Therefore, the confirmed AI Theory attendance is:
 
-**85.03%**
+**90%**
 
 AttendSense shall calculate this percentage independently.
 
-If an uploaded attendance source already displays an overall attendance percentage, that percentage may be used for validation but shall not replace the system's independently calculated value.
+An extracted percentage may be used for validation but shall not replace the system's independently calculated course attendance.
 
 Current overall attendance may be displayed as supporting information throughout AttendSense.
 
@@ -2357,7 +2236,7 @@ Current overall attendance may be displayed as supporting information throughout
 
 ## 6.5 Attendance Threshold Classification
 
-AttendSense shall compare the student's confirmed overall attendance against the fixed Phase 1 threshold:
+AttendSense shall compare the applicable confirmed course attendance against the fixed Phase 1 threshold:
 
 **75%**
 
@@ -2367,9 +2246,9 @@ The attendance state shall be classified as:
 
 If:
 
-**P / E >= 0.75**
+**present / conducted >= 0.75**
 
-the student is considered to be at or above the required attendance threshold.
+the applicable course is considered to be at or above the required attendance threshold.
 
 This makes the student eligible for the **Safe Bunk Calculator**.
 
@@ -2377,9 +2256,9 @@ This makes the student eligible for the **Safe Bunk Calculator**.
 
 If:
 
-**P / E < 0.75**
+**present / conducted < 0.75**
 
-the student is considered below the required attendance threshold.
+the applicable course is considered below the required attendance threshold.
 
 This makes the student eligible for the **Attendance Recovery Calculator**.
 
@@ -2395,108 +2274,21 @@ The **Future Attendance Simulator** shall remain available regardless of whether
 
 ---
 
-## 6.6 Attendance Slot Weighting
+## 6.6 Confirmed Future Session Model
 
-Future attendance calculations shall operate using attendance slots.
+One confirmed scheduled attendance event represents one future attendance occurrence for its matched course. AttendSense shall not apply a universal lecture, laboratory, or duration-based weighting rule.
 
-For Phase 1:
+If a practical or laboratory session visually spans multiple timetable periods but the confirmed timetable identifies it as one continuous session, it shall be one scheduled attendance event.
 
-| Academic Event | Attendance Slots |
-|---|---:|
-| Lecture | 1 |
-| Laboratory Session | 2 |
+Future updates are applied independently to each matched course record. For an attended occurrence, conducted and present increase by one. For a skipped occurrence, conducted and absent increase by one.
 
-Therefore:
+## 6.7 Course-Code, Timetable, Calendar, and Batch Applicability
 
-### Attended Lecture
+Where a valid structured course code exists, it is the authoritative primary identity for matching a confirmed attendance record with a confirmed timetable session. Theory and Practical records with separate official codes, including T-coded Theory and P-coded Practical, shall remain separate. Minor OCR course-name differences shall not override a valid course-code match.
 
-**Present Slots +1**
+Only sessions supported by the confirmed uploaded timetable, confirmed Academic Calendar, confirmed course mapping, applicable batch, and relevant date/time may participate. Batch mismatches are excluded; unresolved batch applicability, code-less sessions, unmatched sessions, and ambiguous sessions require review and shall not silently affect calculations.
 
-**Effective Total Slots +1**
-
-### Missed Lecture
-
-**Present Slots +0**
-
-**Effective Total Slots +1**
-
-### Attended Laboratory Session
-
-**Present Slots +2**
-
-**Effective Total Slots +2**
-
-### Missed Laboratory Session
-
-**Present Slots +0**
-
-**Effective Total Slots +2**
-
-These slot-weighting rules shall be used consistently by:
-
-- Safe Bunk Calculator.
-- Attendance Recovery Calculator.
-- Future Attendance Simulator.
-
----
-
-## 6.7 General Future Attendance Formula
-
-For any future attendance scenario, define:
-
-- `P = Current Overall Present Slots`
-- `E = Current Overall Effective Total Slots`
-- `A = Future Attendance Slots Successfully Attended`
-- `M = Future Attendance Slots Missed`
-
-Then:
-
-**Future Present Slots = P + A**
-
-and:
-
-**Future Effective Total Slots = E + A + M**
-
-Therefore:
-
-**Projected Attendance % = ((P + A) / (E + A + M)) × 100**
-
-This formula forms the mathematical basis of future attendance scenarios.
-
-### Example
-
-Suppose:
-
-- Current Present Slots = 142
-- Current Effective Total Slots = 167
-
-The student hypothetically:
-
-- Attends 3 lectures = 3 attended slots
-- Attends 1 laboratory session = 2 attended slots
-- Misses 2 lectures = 2 missed slots
-
-Therefore:
-
-**A = 5**
-
-**M = 2**
-
-Future Present Slots:
-
-**142 + 5 = 147**
-
-Future Effective Total Slots:
-
-**167 + 5 + 2 = 174**
-
-Projected attendance:
-
-**(147 / 174) × 100 = 84.48%**
-
-Therefore:
-
-**Projected Overall Attendance = 84.48%**
+Teaching and Teaching Continues permit timetable sessions. Confirmed public holidays and Non-Teaching periods may suppress them. Unknown or ambiguous calendar states require conservative handling and shall not silently suppress sessions. Calendar applicability and scope metadata shall be respected where required.
 
 ---
 
@@ -2504,15 +2296,9 @@ Therefore:
 
 ## 6.8.1 Eligibility
 
-Safe Bunk Calculator shall operate only when:
+Safe Bunk Calculator shall evaluate a potential skip only when the applicable confirmed course attendance is at or above 75%.
 
-**Confirmed Overall Attendance >= 75%**
-
-If:
-
-**Confirmed Overall Attendance < 75%**
-
-Safe Bunk analysis shall not proceed.
+If the applicable course attendance is below 75%, Safe Bunk shall not approve a bunk for that course.
 
 AttendSense shall direct the student toward Attendance Recovery where appropriate.
 
@@ -2520,57 +2306,31 @@ AttendSense shall direct the student toward Attendance Recovery where appropriat
 
 ## 6.8.2 Safe Bunk Analysis Window
 
-Safe Bunk Calculator shall consider applicable scheduled classes beginning from:
+Safe Bunk Calculator shall consider only today's remaining applicable classes. A current-day session is selectable only when `current_time < class_start_time`; once `current_time >= class_start_time`, it is not a future selectable bunk opportunity.
 
-**Current Day**
-
-through:
-
-**Final Applicable Academic Day of the Current Week**
-
-AttendSense shall generate these classes using:
-
-- The student's predefined timetable.
-- The applicable academic calendar.
-
-Classes falling on holidays or other defined non-working academic days shall be excluded.
+Applicable sessions shall use the confirmed timetable, confirmed Academic Calendar, confirmed course mapping, and applicable batch.
 
 ---
 
-## 6.8.3 Default Safe Bunk State
+## 6.8.3 Safe Bunk Selection
 
-Every applicable future lecture and laboratory session displayed in Safe Bunk shall initially have the state:
+AttendSense shall display today's remaining applicable classes. The student may explicitly select one or more classes they are considering missing, with no arbitrary predefined maximum.
 
-**ATTEND**
-
-The student may change one or multiple future classes from:
-
-**ATTEND → BUNK**
-
-There shall be no arbitrary predefined limit on how many displayed classes the student may mark as BUNK.
-
-The complete selected plan shall instead be mathematically evaluated.
+Only explicitly selected classes shall affect the Safe Bunk projection. Unselected displayed classes shall not change conducted, present, or absent attendance and shall not be assumed to be attended.
 
 ---
 
 ## 6.8.4 Safe Bunk Calculation
 
-Let:
+For one explicitly selected skipped occurrence of matched course C:
 
-- `P = Current Present Slots`
-- `E = Current Effective Total Slots`
-- `A = Slots belonging to displayed future classes remaining ATTEND`
-- `B = Slots belonging to displayed future classes selected as BUNK`
+**new_conducted_C = conducted_C + 1**  
+**new_present_C = present_C**  
+**new_absent_C = absent_C + 1**
 
-Then:
+**Projected Attendance_C = new_present_C / new_conducted_C × 100**
 
-**Projected Present Slots = P + A**
-
-**Projected Effective Total Slots = E + A + B**
-
-Therefore:
-
-**Projected Attendance % = ((P + A) / (E + A + B)) × 100**
+For N selected skipped occurrences of the same course, conducted and absent each increase by N while present remains unchanged. Different courses shall be calculated independently.
 
 ---
 
@@ -2578,7 +2338,7 @@ Therefore:
 
 If:
 
-**Projected Attendance >= 75%**
+**Every affected matched course has Projected Attendance >= 75%**
 
 the selected bunk plan shall be classified:
 
@@ -2586,66 +2346,23 @@ the selected bunk plan shall be classified:
 
 If:
 
-**Projected Attendance < 75%**
+**Any affected matched course has Projected Attendance < 75%**
 
 the selected bunk plan shall be classified:
 
 **UNSAFE**
 
-The calculation shall evaluate the **complete selected plan**, including both:
-
-- Classes marked ATTEND.
-- Classes marked BUNK.
+Exactly 75% satisfies the threshold. Classification shall use unrounded values.
 
 ---
 
 ## 6.8.6 Safe Bunk Example
 
-Suppose the student's confirmed attendance is:
+For AI Theory, suppose conducted = 30, present = 27, and absent = 3. Current attendance is `27 / 30 × 100 = 90%`.
 
-- Present Slots = 142
-- Effective Total Slots = 167
+If the student selects one upcoming AI Theory class to bunk, conducted becomes 31, present remains 27, and absent becomes 4. Projected attendance is `27 / 31 × 100 ≈ 87.10%`; the selected skip is therefore Safe.
 
-Current attendance:
-
-**(142 / 167) × 100 = 85.03%**
-
-Suppose the remaining applicable classes displayed for the current week are:
-
-| Class | Type | Status | Slots |
-|---|---|---|---:|
-| AI | Lecture | BUNK | 1 |
-| ML | Lecture | BUNK | 1 |
-| DBMS | Laboratory | ATTEND | 2 |
-| CN | Lecture | ATTEND | 1 |
-
-Therefore:
-
-**Attended Future Slots = 3**
-
-**Bunked Future Slots = 2**
-
-Projected Present Slots:
-
-**142 + 3 = 145**
-
-Projected Effective Total Slots:
-
-**167 + 3 + 2 = 172**
-
-Projected attendance:
-
-**(145 / 172) × 100 = 84.30%**
-
-Because:
-
-**84.30% >= 75%**
-
-the selected plan is:
-
-**SAFE**
-
-This result assumes the student actually attends the classes that remain marked **ATTEND**.
+If the student selects N AI Theory classes, the projection is `27 / (30 + N) × 100`; all N selected skips are aggregated for AI Theory only.
 
 The calculation does not modify the confirmed attendance dataset.
 
@@ -2655,199 +2372,55 @@ The calculation does not modify the confirmed attendance dataset.
 
 ## 6.9.1 Eligibility
 
-Attendance Recovery Calculator shall operate when:
-
-**Confirmed Overall Attendance < 75%**
-
-If:
-
-**Confirmed Overall Attendance >= 75%**
-
-AttendSense shall indicate that attendance recovery is not currently required.
+Attendance Recovery Calculator shall operate on one applicable confirmed course record below 75%. If that course is already at or above 75%, recovery is not required for that course.
 
 ---
 
-## 6.9.2 Recovery Slot Formula
+## 6.9.2 Course Recovery Formula
 
 Let:
 
-- `P = Current Present Slots`
-- `E = Current Effective Total Slots`
-- `R = Additional Attendance Slots Successfully Attended`
+- `P = Course Present`
+- `C = Course Conducted`
+- `x = Additional Future Sessions Successfully Attended`
 
 To reach at least 75%:
 
-**(P + R) / (E + R) >= 0.75**
+**(P + x) / (C + x) >= 0.75**
 
-Solving for `R`:
+Solving for `x`:
 
-**P + R >= 0.75(E + R)**
+**P + x >= 0.75(C + x)**
 
-**P + R >= 0.75E + 0.75R**
-
-**0.25R >= 0.75E - P**
+**0.25x >= 0.75C - P**
 
 Therefore:
 
-**R >= (0.75E - P) / 0.25**
+**x >= (0.75C - P) / 0.25**
 
-The required recovery slots shall therefore be:
+The required attended sessions shall therefore be:
 
-**Required Recovery Slots = ceil((0.75E - P) / 0.25)**
+**Required Attended Sessions = max(0, ceil((0.75C - P) / 0.25))**
 
 with a minimum result of `0`.
 
-The result represents **attendance slots**, not necessarily individual classes.
+The result is the minimum integer number of future successfully attended sessions for that course.
 
 ---
 
 ## 6.9.3 Recovery Example
 
-Suppose:
+For a course with conducted = 20, present = 14, and absent = 6, current attendance is `14 / 20 = 70%`.
 
-- Present Slots = 120
-- Effective Total Slots = 170
-
-Current attendance:
-
-**(120 / 170) × 100 = 70.59%**
-
-Recovery calculation:
-
-**R >= (0.75 × 170 - 120) / 0.25**
-
-**R >= (127.5 - 120) / 0.25**
-
-**R >= 7.5 / 0.25**
-
-**R >= 30**
-
-Therefore:
-
-**Required Recovery Slots = 30**
-
-If the student successfully attends 30 additional attendance slots:
-
-Present Slots:
-
-**120 + 30 = 150**
-
-Effective Total Slots:
-
-**170 + 30 = 200**
-
-Attendance:
-
-**(150 / 200) × 100 = 75.00%**
-
-Therefore, the student must successfully attend at least:
-
-**30 additional attendance slots**
-
-to mathematically reach 75%.
+`x >= (0.75 × 20 - 14) / 0.25 = 4`, so four future successfully attended sessions of that course are required. After attending four, conducted = 24, present = 18, absent = 6, and attendance is `18 / 24 = 75%`.
 
 ---
 
-## 6.9.4 Recovery Slot-to-Schedule Mapping
+## 6.9.4 Recovery Schedule Mapping
 
-The required recovery-slot count shall be mapped to actual future academic classes.
+After x is determined, AttendSense shall map it chronologically to actual future sessions of the same matched course using the confirmed timetable, confirmed Academic Calendar, course-code mapping, and batch applicability. Each projected attended matched session increases conducted and present by one and leaves absent unchanged.
 
-AttendSense shall begin with the next applicable scheduled class and process future classes chronologically.
-
-Each future class contributes:
-
-### Lecture
-
-**+1 Present Slot**
-
-**+1 Effective Total Slot**
-
-### Laboratory Session
-
-**+2 Present Slots**
-
-**+2 Effective Total Slots**
-
-The system shall continue accumulating successfully attended slots until:
-
-**Projected Attendance >= 75%**
-
-The mathematically calculated Required Recovery Slots value represents the minimum number of attendance slots required to reach the 75% threshold.
-
-When this requirement is mapped to actual future classes, the final scheduled recovery contribution may exceed the mathematical minimum because a lecture or laboratory session cannot be partially attended.
-
-For example, if the student mathematically requires 1 additional attendance slot but the next applicable class is a laboratory session worth 2 attendance slots, the complete laboratory session shall be included in the recovery plan.
-
-Therefore, the timetable-based recovery path shall continue until the accumulated attendance-slot contribution is greater than or equal to the mathematically required recovery slots.
-
----
-
-## 6.9.5 Recovery Example with Lectures and Labs
-
-Suppose the student requires:
-
-**5 Recovery Slots**
-
-and the upcoming schedule is:
-
-| Future Class | Type | Slot Contribution |
-|---|---|---:|
-| AI | Lecture | 1 |
-| ML Lab | Laboratory | 2 |
-| DBMS | Lecture | 1 |
-| CN | Lecture | 1 |
-
-Accumulated recovery slots:
-
-After AI:
-
-**1 slot**
-
-After ML Lab:
-
-**3 slots**
-
-After DBMS:
-
-**4 slots**
-
-After CN:
-
-**5 slots**
-
-Therefore, the recovery requirement is reached after the CN lecture.
-
-AttendSense may then identify that class/date as the projected recovery point.
-
----
-
-## 6.9.6 Recovery Across Multiple Weeks
-
-Attendance Recovery shall not be restricted to the current academic week.
-
-If the required recovery slots cannot be accumulated during the current week, AttendSense shall continue through subsequent applicable academic weeks.
-
-The system shall use:
-
-- Timetable data.
-- Academic calendar data.
-- Lecture/laboratory slot weights.
-
-until the recovery requirement is satisfied or available future academic data ends.
-
----
-
-## 6.9.7 Insufficient Future Schedule Data
-
-If AttendSense calculates the mathematical recovery requirement but available timetable or academic-calendar information ends before the complete recovery path can be generated:
-
-AttendSense shall still provide:
-
-**Required Recovery Attendance Slots**
-
-but shall clearly state that the complete recovery schedule/date cannot currently be determined.
-
-AttendSense shall not invent future academic occurrences.
+Recovery may continue across multiple academic weeks within available confirmed schedule/calendar coverage. If coverage ends before x applicable sessions can be identified, AttendSense shall still return the mathematical required-session count, state that the complete recovery path/date cannot be determined, and not invent future sessions.
 
 ---
 
@@ -2855,7 +2428,7 @@ AttendSense shall not invent future academic occurrences.
 
 ## 6.10.1 Availability
 
-Future Attendance Simulator shall be available whenever a valid latest confirmed attendance dataset exists.
+Future Attendance Simulator shall be available whenever a valid latest confirmed attendance dataset and the required confirmed timetable and Academic Calendar coverage exist.
 
 There shall be no eligibility restriction based on the student's attendance percentage.
 
@@ -2869,18 +2442,13 @@ Therefore, it shall be available when attendance is:
 
 ## 6.10.2 Simulation Period
 
-The student shall select an applicable future simulation period within the range supported by the available:
-
-- Class timetable.
-- Academic calendar.
-
-Unlike Safe Bunk Calculator, the Future Attendance Simulator shall not be restricted to the remainder of the current week.
+The student shall select an applicable future simulation period within confirmed timetable and Academic Calendar coverage. Unlike Safe Bunk, which is today-only, the simulator may cover that selected future period.
 
 ---
 
 ## 6.10.3 Default Simulation State
 
-Every applicable future lecture or laboratory session within the selected simulation period shall initially have the state:
+Every applicable future session within the selected simulation period shall initially have the state:
 
 **ATTEND**
 
@@ -2898,75 +2466,17 @@ The simulator shall treat these selections purely as hypothetical future attenda
 
 ## 6.10.4 Future Simulation Calculation
 
-Let:
+For each matched future occurrence of course C, ATTEND increases conducted and present by one while absent is unchanged. BUNK/MISS increases conducted and absent by one while present is unchanged.
 
-- `P = Current Present Slots`
-- `E = Current Effective Total Slots`
-- `A = Future Attended Slots`
-- `M = Future Missed Slots`
-
-Then:
-
-**Simulated Present Slots = P + A**
-
-**Simulated Effective Total Slots = E + A + M**
-
-Therefore:
-
-**Predicted Attendance % = ((P + A) / (E + A + M)) × 100**
+Occurrences are aggregated by course and calculated independently, maintaining theory/practical separation. Projected course attendance is `projected_present_C / projected_conducted_C × 100`; overall attendance is supporting context only.
 
 ---
 
 ## 6.10.5 Future Simulation Example
 
-Suppose:
+Suppose the student selects one future AI Theory occurrence as ATTEND and one future ML Theory occurrence as BUNK/MISS. AI Theory increases its conducted and present counts by one; ML Theory increases its conducted and absent counts by one. Each affected course's projected percentage is calculated independently.
 
-- Present Slots = 120
-- Effective Total Slots = 170
-
-Current attendance:
-
-**(120 / 170) × 100 = 70.59%**
-
-The student creates the following hypothetical scenario:
-
-| Future Class | Type | Decision | Slot Impact |
-|---|---|---|---:|
-| AI | Lecture | ATTEND | 1 |
-| ML | Lecture | ATTEND | 1 |
-| DBMS Lab | Laboratory | ATTEND | 2 |
-| CN | Lecture | MISS | 1 |
-| AI Lab | Laboratory | MISS | 2 |
-
-Therefore:
-
-Future attended slots:
-
-**A = 4**
-
-Future missed slots:
-
-**M = 3**
-
-Simulated Present Slots:
-
-**120 + 4 = 124**
-
-Simulated Effective Total Slots:
-
-**170 + 4 + 3 = 177**
-
-Predicted attendance:
-
-**(124 / 177) × 100 = 70.06%**
-
-Therefore:
-
-**Predicted Overall Attendance = 70.06%**
-
-The student can therefore see the mathematical impact of the hypothetical future decisions.
-
-This simulation shall not modify the student's confirmed attendance dataset.
+The student can therefore compare the mathematical impact of hypothetical decisions without modifying the confirmed attendance dataset.
 
 ---
 
@@ -2974,102 +2484,46 @@ This simulation shall not modify the student's confirmed attendance dataset.
 
 AttendSense shall not invent future academic classes.
 
-When an attendance analysis requires future classes, the system shall generate actual applicable occurrences using the student's predefined timetable.
+When an attendance analysis requires future classes, the system shall generate actual applicable occurrences using the student's confirmed uploaded timetable.
 
 The timetable shall determine:
 
 - Which classes occur.
 - On which academic day they occur.
-- Their applicable schedule/time information.
-- Whether the class is a lecture or laboratory session.
+- Their date or day, start time, and end time.
+- Matched course identity, theory/practical identity, batch applicability, and continuous multi-period structure.
 
 The timetable shall therefore provide the schedule structure required for attendance planning.
 
-When generating future attendance opportunities for the current date, AttendSense shall include only applicable classes whose scheduled start time has not yet passed. Classes whose scheduled start time has already passed shall not be treated as future attendance opportunities. Future academic dates shall continue to be processed according to the predefined timetable and academic calendar.
+For current-day Safe Bunk, only applicable classes whose scheduled start time has not yet passed shall be selectable. Future dates are processed only for Recovery and Future Attendance Simulator according to confirmed timetable and Academic Calendar coverage.
 
 ---
 
 # 6.12 Academic Calendar-Aware Calculation
 
-The academic calendar shall be applied together with the predefined timetable.
-
-A timetable occurrence shall only become an applicable future attendance opportunity when the corresponding date is an academic working day.
-
-Therefore:
-
-**Timetable Occurrence**  
-↓  
-**Academic Calendar Check**  
-↓  
-**Working Academic Day?**
-
-**Yes → Include Class**
-
-**No → Exclude Class**
-
-Holidays and other defined non-working academic days shall not contribute attendance slots.
+The confirmed Academic Calendar shall be applied together with the confirmed uploaded timetable. Teaching and Teaching Continues allow sessions; confirmed public holidays and Non-Teaching periods may suppress them. Unknown or ambiguous states require review or conservative handling and shall not silently suppress classes.
 
 ---
 
 # 6.13 Overall Attendance Calculation Principle
 
-AttendSense Phase 1 shall perform attendance analysis at the **overall attendance level**.
-
-Individual subject-wise attendance percentages shall not form the basis of:
-
-- Safe Bunk calculations.
-- Attendance Recovery calculations.
-- Future Attendance Simulation calculations.
-
-Future lecture and laboratory selections identify **which future attendance opportunities the student plans to attend or miss**.
-
-Their attendance-slot effects shall then be applied to the student's overall:
-
-- Present Slots.
-- Effective Total Slots.
-
-For example, if the student selects an AI lecture as BUNK, AttendSense shall not calculate a separate AI attendance percentage.
-
-Instead, the AI lecture contributes:
-
-**+0 Present Slots**
-
-**+1 Effective Total Slot**
-
-to the overall projected attendance calculation.
-
-Similarly, missing a laboratory session contributes:
-
-**+0 Present Slots**
-
-**+2 Effective Total Slots**
-
-to the overall projected attendance calculation.
+Safe Bunk, Attendance Recovery, and Future Attendance Simulator shall use course-wise attendance as their primary decision basis. Overall attendance may be retained only as supporting context or cross-validation information.
 
 ---
 
 # 6.14 Multiple Future Class Selection
 
-AttendSense shall allow multiple future lectures and laboratory sessions to participate in an attendance-analysis scenario where supported by the selected feature.
+AttendSense shall allow multiple future session selections in an attendance-analysis scenario where supported by the selected feature.
 
-The system shall calculate the **combined slot impact** of all applicable selected future decisions.
+The system shall group selected future occurrences by matched course code and calculate each course independently.
 
 For example:
 
-- 2 attended lectures = 2 attended slots.
-- 1 attended laboratory = 2 attended slots.
-- 2 missed lectures = 2 missed slots.
-- 1 missed laboratory = 2 missed slots.
+AI Theory → 2 selected skipped occurrences; ML Theory → 1 selected skipped occurrence.
 
 Therefore:
 
-**Total Future Attended Slots = 4**
-
-**Total Future Missed Slots = 4**
-
-These combined slot values shall be applied to the student's overall attendance values.
-
-AttendSense shall not create independent subject-wise attendance calculations for each selected future class.
+AI Theory conducted and absent each increase by 2; ML Theory conducted and absent each increase by 1. AttendSense shall not combine course occurrences into generic attended or missed totals.
 
 ---
 
@@ -3097,22 +2551,11 @@ shall remain below the 75% threshold even if an inappropriate early rounding ope
 
 ---
 
-# 6.16 Integer Attendance-Slot Rule
+# 6.16 Rounding and Integer Recovery Rule
 
-Attendance slots shall be represented as whole units according to the defined Phase 1 weighting:
+AttendSense shall use full available precision internally and round only student-facing display values, normally to two decimal places. Threshold decisions shall use unrounded values; 74.999% remains below 75%, while exactly 75% satisfies the threshold.
 
-- Lecture = 1 slot.
-- Laboratory = 2 slots.
-
-AttendSense shall not generate fractional attendance-slot results such as:
-
-- 1.5 attendance slots.
-- 2.3 attendance slots.
-- 4.7 attendance slots.
-
-When determining mathematically required recovery slots, AttendSense shall round upward using the ceiling operation where required.
-
-Future schedule mapping shall then determine which actual combination of lectures and laboratory sessions reaches or exceeds that required slot count.
+Recovery required-session counts shall be non-negative integers and use ceiling where required by the course recovery formula.
 
 ---
 
@@ -3120,19 +2563,18 @@ Future schedule mapping shall then determine which actual combination of lecture
 
 AttendSense shall enforce the following calculation boundaries:
 
-- Overall Present Slots cannot be negative.
-- Overall Effective Total Slots must be greater than zero before percentage calculation.
-- Overall Present Slots cannot exceed Overall Effective Total Slots.
+- Conducted, present, and absent attendance cannot be negative.
+- Present plus absent must equal conducted.
+- Percentage-based decisions shall not divide by zero.
 - Attendance percentage cannot be below 0%.
 - Attendance percentage cannot exceed 100%.
-- Future attended attendance slots cannot be negative.
-- Future missed attendance slots cannot be negative.
-- Recovery attendance slots cannot be negative.
-- No Attendance normalization shall not produce a negative Effective Total Slots value.
+- Future selected occurrences cannot be negative.
+- Recovery required-session counts cannot be negative.
 - Calculations shall not proceed using unconfirmed attendance data.
 - Calculations shall not proceed using rejected attendance data.
 - Failed newer attendance uploads shall not replace valid confirmed attendance data.
 - Calculator or simulator results shall not become confirmed attendance data.
+- Required timetable and Academic Calendar data shall be confirmed, and unmatched or ambiguous sessions shall not silently affect calculation.
 
 ---
 
@@ -3142,10 +2584,7 @@ Every attendance-analysis calculation shall begin from the student's:
 
 **Latest Confirmed Attendance Dataset**
 
-Suppose a student uploads and confirms:
-
-- Present Slots = 142
-- Effective Total Slots = 167
+Suppose a student uploads and confirms AI Theory with conducted = 30, present = 27, and absent = 3.
 
 The student may then perform:
 
@@ -3161,8 +2600,9 @@ followed by:
 
 All calculations shall continue to begin from:
 
-- **P = 142**
-- **E = 167**
+- **conducted = 30**
+- **present = 27**
+- **absent = 3**
 
 unless the student successfully uploads, processes, validates, reviews, confirms, and saves newer attendance information.
 
@@ -3178,7 +2618,7 @@ Replacement shall occur only after successful completion of:
 
 **Input**  
 ↓  
-**File Validation**  
+**Validation**  
 ↓  
 **Extraction**  
 ↓  
@@ -3186,11 +2626,11 @@ Replacement shall occur only after successful completion of:
 ↓  
 **Automatic Validation**  
 ↓  
-**Student Review**  
+**Review/Edit**  
 ↓  
-**Student Confirmation**  
+**Confirmation**  
 ↓  
-**Successful Save**
+**Save**
 
 Only then shall:
 
@@ -3206,28 +2646,11 @@ If the newer dataset fails any required stage or is rejected by the student:
 
 All final attendance calculations shall be deterministic.
 
-For identical:
+For identical confirmed course records, threshold, current date/time where relevant, course-code mapping, timetable, Academic Calendar, batch applicability, and selected hypothetical decisions, AttendSense shall produce the same mathematical result.
 
-- Confirmed Present Slots.
-- Confirmed Effective Total Slots.
-- Attendance threshold.
-- Timetable information.
-- Academic calendar information.
-- Lecture/laboratory slot weights.
-- Selected future attendance decisions.
+Generative AI shall not determine course attendance percentages, Safe Bunk eligibility or safe/unsafe results, recovery required-session counts or threshold achievement, or Future Attendance Simulator percentages.
 
-AttendSense shall produce the same mathematical result.
-
-Generative AI shall not determine:
-
-- Overall attendance percentages.
-- Safe Bunk eligibility.
-- Safe/unsafe bunk results.
-- Required recovery slots.
-- Recovery threshold achievement.
-- Future Attendance Simulation percentages.
-
-AI/OCR/vision or document-processing technologies may assist with extracting attendance information from uploaded documents, but the final attendance calculations shall be performed using deterministic mathematical logic.
+AI/OCR/vision or document-processing technologies may assist only with extracting attendance information from uploaded documents. Final calculation-critical values and outcomes shall use deterministic mathematical logic.
 
 ---
 
@@ -3235,19 +2658,17 @@ AI/OCR/vision or document-processing technologies may assist with extracting att
 
 AttendSense shall distinguish between four different concepts:
 
-### Confirmed Overall Attendance
+### Confirmed Course Attendance
 
-The student's attendance calculated from the latest confirmed attendance dataset.
-
-This represents the base attendance information used by AttendSense.
+The attendance for an eligible course record calculated from the latest confirmed attendance dataset. This is the base information used by AttendSense for calculation-critical analysis.
 
 ### Safe Bunk Result
 
-A mathematical projection showing whether the student's selected future bunk plan keeps projected overall attendance at or above 75%.
+A mathematical projection showing whether the student's explicitly selected remaining classes for today keep every affected course at or above 75%.
 
 ### Attendance Recovery Result
 
-A mathematical calculation identifying the minimum additional attendance slots required to reach at least 75%, together with schedule-aware recovery information where determinable.
+A mathematical calculation identifying the minimum additional attended sessions required for one course to reach at least 75%, together with schedule-aware recovery information where determinable.
 
 ### Future Attendance Simulation
 
@@ -3259,105 +2680,63 @@ Safe Bunk, Attendance Recovery, and Future Attendance Simulation results shall n
 
 # 6.22 Calculation Rules Summary
 
-The Phase 1 attendance calculation model shall be:
+The Phase 1 attendance calculation model shall begin with the latest confirmed attendance dataset and use each matched course record's conducted, present, and absent values.
 
-**Latest Confirmed Attendance Dataset**
-
-**P = Overall Present Slots**
-
-**E = Overall Effective Total Slots**
-
-↓
-
-**Confirmed Attendance = (P / E) × 100**
-
-↓
+**Confirmed Course Attendance = (present / conducted) × 100**
 
 **Fixed Threshold = 75%**
 
-↓
-
 ### Safe Bunk
 
-**Attendance >= 75%**
+**Course Attendance >= 75%**
 
 ↓
 
-**Generate Current-Day → End-of-Week Applicable Classes**
+**Display today's remaining applicable classes only**
 
 ↓
 
-**Lecture = 1 Slot / Lab = 2 Slots**
+**Student explicitly selects classes to skip**
 
 ↓
 
-**Default ATTEND + Student BUNK Selections**
+**For each selected course: conducted + 1, present unchanged, absent + 1**
 
 ↓
 
-**Projected Attendance**
-
-↓
-
-**Projected Attendance >= 75% → SAFE**
-
-**Projected Attendance < 75% → UNSAFE**
+**Every affected course >= 75% → SAFE; otherwise → UNSAFE**
 
 ---
 
 ### Attendance Recovery
 
-**Attendance < 75%**
+**Course Attendance < 75%**
 
 ↓
 
-**Required Recovery Slots = ceil((0.75E - P) / 0.25)**
+**Required Attended Sessions = max(0, ceil((0.75C - P) / 0.25))**
 
 ↓
 
-**Map Required Slots to Future Timetable**
-
-↓
-
-**Lecture = 1 Slot / Lab = 2 Slots**
-
-↓
-
-**Determine Earliest Recovery Point Where Possible**
-
-↓
-
-**Projected Attendance >= 75%**
+**Map sessions to the same course's confirmed future timetable where possible**
 
 ---
 
 ### Future Attendance Simulator
 
-**Available at Any Confirmed Attendance Percentage**
+**Available for a selected future period within confirmed coverage**
 
 ↓
 
-**Select Future Simulation Period**
+**Default ATTEND; student may choose ATTEND or BUNK/MISS**
 
 ↓
 
-**Generate Applicable Future Classes**
-
-↓
-
-**Default ATTEND + Student ATTEND/BUNK Decisions**
-
-↓
-
-**Calculate Future Attended Slots + Future Missed Slots**
-
-↓
-
-**Predicted Attendance = ((P + A) / (E + A + M)) × 100**
+**Calculate projected attendance independently for each affected course**
 
 ---
 
-All calculations shall operate on **overall attendance**, use deterministic mathematical logic, respect the defined lecture/laboratory slot weights, use timetable and academic-calendar information where future classes are required, and preserve the latest confirmed attendance dataset until validly replaced.
+All calculations shall use deterministic mathematical logic, respect confirmed timetable, Academic Calendar, course-code, and batch applicability where future sessions are required, and preserve the latest confirmed attendance dataset until validly replaced. Overall attendance may be displayed only as supporting context.
 
 # 7. Attendance Data and Validation Requirements
 
