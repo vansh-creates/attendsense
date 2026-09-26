@@ -1,0 +1,8 @@
+docs/
+.codex/
+.pnpm-store/
+node_modules/
+.next/
+coverage/
+README.md
+pnpm-lock.yaml
